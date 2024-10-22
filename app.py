@@ -15,5 +15,19 @@ def verify():
     else:
         return "Error de verificación", 403
 
+# Manejar notificaciones de mensajes de Instagram
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.json
+    if data and 'entry' in data:
+        for entry in data['entry']:
+            for message in entry.get('messaging', []):
+                sender_id = message['sender']['id']
+                message_text = message.get('message', {}).get('text')
+                print(f"Nuevo mensaje de {sender_id}: {message_text}")
+        return "OK", 200
+    else:
+        return "Error: No se pudo procesar el webhook", 400
+
 if __name__ == '__main__':
     app.run(port=5000)
