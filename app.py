@@ -21,10 +21,11 @@ def webhook():
     data = request.json
     if data and 'entry' in data:
         for entry in data['entry']:
-            for message in entry.get('messaging', []):
-                sender_id = message['sender']['id']
-                message_text = message.get('message', {}).get('text')
-                print(f"Nuevo mensaje de {sender_id}: {message_text}")
+            for change in entry.get('changes', []):
+                if change.get('field') == 'messages':
+                    sender_id = change['value']['sender']['id']
+                    message_text = change['value']['message']['text']
+                    print(f"Nuevo mensaje de {sender_id}: {message_text}")
         return "OK", 200
     else:
         return "Error: No se pudo procesar el webhook", 400
