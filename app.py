@@ -10,12 +10,12 @@ def verify():
     challenge = request.args.get('hub.challenge')
 
     # Verifica que el token sea correcto
-    if mode == 'subscribe' and token == 'tu_token_de_verificacion':
+    if mode == 'subscribe' and token == 'mi_token_de_verificacion':  # Usa el token que configuraste en Facebook
         return challenge, 200
     else:
         return "Error de verificación", 403
 
-# Manejar notificaciones de mensajes de Instagram
+# Manejo de notificaciones de mensajes de Instagram (POST)
 @app.route('/webhook', methods=['POST'])
 def webhook():
     data = request.json
