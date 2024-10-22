@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
@@ -9,8 +9,7 @@ def verify():
     token = request.args.get('hub.verify_token')
     challenge = request.args.get('hub.challenge')
 
-    # Verifica que el token sea correcto
-    if mode == 'subscribe' and token == 'mi_token_de_verificacion':  # Usa el token que configuraste en Facebook
+    if mode == 'subscribe' and token == 'mi_token_de_verificacion':  # Token de verificación
         return challenge, 200
     else:
         return "Error de verificación", 403
@@ -18,7 +17,10 @@ def verify():
 # Manejo de notificaciones de mensajes de Instagram (POST)
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.json
+    print("Solicitud POST recibida")
+    data = request.json  # Captura el JSON recibido
+    print(f"Datos recibidos: {data}")  # Imprime los datos recibidos para verlos en los logs
+
     if data and 'entry' in data:
         for entry in data['entry']:
             for change in entry.get('changes', []):
