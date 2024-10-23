@@ -1,4 +1,5 @@
-from flask import Flask, request, jsonify
+import requests
+from flask import Flask, request
 
 app = Flask(__name__)
 
@@ -9,10 +10,27 @@ def verify():
     token = request.args.get('hub.verify_token')
     challenge = request.args.get('hub.challenge')
 
-    if mode == 'subscribe' and token == 'mi_token_de_verificacion':  # Token de verificación
+    if mode == 'subscribe' and token == 'mi_token_de_verificacion':
         return challenge, 200
     else:
         return "Error de verificación", 403
+
+# Enviar mensaje de respuesta
+def enviar_mensaje(recipient_id, access_token):
+    url = f"https://graph.facebook.com/v17.0/me/messages?access_token={access_token}"
+    headers = {
+        "Content-Type": "application/json"
+    }
+    data = {
+        "recipient": {"id": recipient_id},
+        "message": {"text": "Soy un robot y este es un mensaje de prueba desde Ranpu"}
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 200:
+        print(f"Mensaje enviado correctamente a {recipient_id}")
+    else:
+        print(f"Error al enviar mensaje: {response.status_code}, {response.text}")
 
 # Manejo de notificaciones de mensajes de Instagram (POST)
 @app.route('/webhook', methods=['POST'])
@@ -23,11 +41,12 @@ def webhook():
 
     if data and 'entry' in data:
         for entry in data['entry']:
-            for change in entry.get('changes', []):
-                if change.get('field') == 'messages':
-                    sender_id = change['value']['sender']['id']
-                    message_text = change['value']['message']['text']
+            for messaging_event in entry.get('messaging', []):
+                sender_id = messaging_event['sender']['id']
+                if 'message' in messaging_event:
+                    message_text = messaging_event['message'].get('text')
                     print(f"Nuevo mensaje de {sender_id}: {message_text}")
+                    enviar_mensaje(sender_id, "EAAWLqclgZCHkBO6do8MBtZCNrQCWpb45fQkdNLPgZAumEuJvbUlur2CnWApDESDLGsZCNGHkZAplBrYQFg3yFPCe7aiSN5ZCirXZA5xSJioczMraxKj4TSyFYYbhyPpQKX4u8Q8uaz1lPWGtfEMhzVEg5jv5sQZBaHNTeKJzeLCfDEaoPXHT41ovVeWl38NcthrrkbGUd3Bj3AZCfKDxpPgYqSOZCPxZBkZD")  # Token de acceso
         return "OK", 200
     else:
         return "Error: No se pudo procesar el webhook", 400
