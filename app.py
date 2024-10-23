@@ -3,6 +3,11 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
+
+access_token = 'EAAWLqclgZCHkBO6do8MBtZCNrQCWpb45fQkdNLPgZAumEuJvbUlur2CnWApDESDLGsZCNGHkZAplBrYQFg3yFPCe7aiSN5ZCirXZA5xSJioczMraxKj4TSyFYYbhyPpQKX4u8Q8uaz1lPWGtfEMhzVEg5jv5sQZBaHNTeKJzeLCfDEaoPXHT41ovVeWl38NcthrrkbGUd3Bj3AZCfKDxpPgYqSOZCPxZBkZD'
+instagram_account_id = '1961699064327445'  # El ID de la cuenta de Instagram
+url = f'https://graph.facebook.com/v12.0/{instagram_account_id}/messages'
+
 # Verificación inicial del webhook
 @app.route('/webhook', methods=['GET'])
 def verify():
@@ -15,22 +20,20 @@ def verify():
     else:
         return "Error de verificación", 403
 
-# Enviar mensaje de respuesta
-def enviar_mensaje(recipient_id, access_token):
-    url = f"https://graph.facebook.com/v17.0/me/messages?access_token={access_token}"
-    headers = {
-        "Content-Type": "application/json"
-    }
+def enviar_mensaje(recipient_id, message_text):
     data = {
-        "recipient": {"id": recipient_id},
-        "message": {"text": "Soy un robot y este es un mensaje de prueba desde Ranpu"}
+        'recipient': {'id': recipient_id},
+        'message': {'text': message_text},
+        'messaging_type': 'RESPONSE',
+        'access_token': access_token
     }
+    response = requests.post(url, json=data)
     
-    response = requests.post(url, headers=headers, json=data)
     if response.status_code == 200:
         print(f"Mensaje enviado correctamente a {recipient_id}")
     else:
         print(f"Error al enviar mensaje: {response.status_code}, {response.text}")
+
 
 # Manejo de notificaciones de mensajes de Instagram (POST)
 @app.route('/webhook', methods=['POST'])
