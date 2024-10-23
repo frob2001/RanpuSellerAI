@@ -33,6 +33,26 @@ def webhook():
     else:
         return "Error: No se pudo procesar el webhook", 400
 
+
+@app.route('/webhook', methods=['POST', 'GET', 'PATCH', 'PUT', 'DELETE'])
+def webhook():
+    # Registra la solicitud completa en los logs
+    print(f"Headers: {request.headers}")
+    print(f"Body: {request.json}")
+    print(f"Method: {request.method}")
+    
+    # Procesar el cuerpo si es necesario
+    data = request.json
+    if data and 'entry' in data:
+        for entry in data['entry']:
+            for message in entry.get('messaging', []):
+                sender_id = message['sender']['id']
+                message_text = message.get('message', {}).get('text')
+                print(f"Nuevo mensaje de {sender_id}: {message_text}")
+        return "OK", 200
+    else:
+        return "Error: No se pudo procesar el webhook", 400
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))  # Obtiene el puerto desde la variable de entorno PORT
     app.run(host='0.0.0.0', port=port)  # Asegura que Flask escuche en el puerto especificado
