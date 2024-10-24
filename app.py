@@ -1,12 +1,38 @@
 import requests
 from flask import Flask, request, render_template
+import time
 
 app = Flask(__name__)
 
+# Datos de tu aplicación
+app_id = '1560936227863673'
+app_secret = '432eda601cb78df51bc55d2bf79d9f3e'
+short_lived_token = 'EAAWLqclgZCHkBO8ZBuqb0SGzZAZAe2vE5swRZBibsiHqP13fXMBCF6P13iqqL15NWXpZAd8Jxjc6uHqATPrwrXvfDHXbXrj3honQYtoXmbVvvIP9crmQNnJMHaPM4NAZB8EmK2BaiVfR1pbZAhog8ZAoeoicP0ZCXKyRbDHhqWAbsowlVFUVQnDdafifnBgSref5KZBkh6PJwOQFjoaTkZANwi3bF5xQX9gVv0hk27v0SqZACLVkZD'
 
-access_token = 'EAAWLqclgZCHkBO6do8MBtZCNrQCWpb45fQkdNLPgZAumEuJvbUlur2CnWApDESDLGsZCNGHkZAplBrYQFg3yFPCe7aiSN5ZCirXZA5xSJioczMraxKj4TSyFYYbhyPpQKX4u8Q8uaz1lPWGtfEMhzVEg5jv5sQZBaHNTeKJzeLCfDEaoPXHT41ovVeWl38NcthrrkbGUd3Bj3AZCfKDxpPgYqSOZCPxZBkZD'
-instagram_account_id = '1961699064327445'  # El ID de la cuenta de Instagram
+# Variables globales para el token de acceso y el ID de Instagram
+access_token = ''
+instagram_account_id = '1961699064327445'
 url = f'https://graph.facebook.com/v12.0/{instagram_account_id}/messages'
+
+
+# Función para obtener un token de larga duración
+def get_long_lived_token():
+    global access_token
+    token_url = f"https://graph.facebook.com/v12.0/oauth/access_token"
+    params = {
+        'grant_type': 'fb_exchange_token',
+        'client_id': app_id,
+        'client_secret': app_secret,
+        'fb_exchange_token': short_lived_token
+    }
+    response = requests.get(token_url, params=params)
+    token_data = response.json()
+
+    if 'access_token' in token_data:
+        access_token = token_data['access_token']
+        print("Nuevo token obtenido:", access_token)
+    else:
+        print("Error al obtener el token de larga duración:", token_data)
 
 # Verificación inicial del webhook
 @app.route('/webhook', methods=['GET'])
@@ -20,7 +46,10 @@ def verify():
     else:
         return "Error de verificación", 403
 
+
+# Función para enviar mensajes
 def enviar_mensaje(recipient_id, message_text):
+    global access_token
     data = {
         'recipient': {'id': recipient_id},
         'message': {'text': message_text},
@@ -39,8 +68,8 @@ def enviar_mensaje(recipient_id, message_text):
 @app.route('/webhook', methods=['POST'])
 def webhook():
     print("Solicitud POST recibida")
-    data = request.json  # Captura el JSON recibido
-    print(f"Datos recibidos: {data}")  # Imprime los datos recibidos para verlos en los logs
+    data = request.json
+    print(f"Datos recibidos: {data}")
 
     if data and 'entry' in data:
         for entry in data['entry']:
@@ -49,15 +78,20 @@ def webhook():
                 if 'message' in messaging_event:
                     message_text = messaging_event['message'].get('text')
                     print(f"Nuevo mensaje de {sender_id}: {message_text}")
-                    enviar_mensaje(sender_id, "EAAWLqclgZCHkBO6do8MBtZCNrQCWpb45fQkdNLPgZAumEuJvbUlur2CnWApDESDLGsZCNGHkZAplBrYQFg3yFPCe7aiSN5ZCirXZA5xSJioczMraxKj4TSyFYYbhyPpQKX4u8Q8uaz1lPWGtfEMhzVEg5jv5sQZBaHNTeKJzeLCfDEaoPXHT41ovVeWl38NcthrrkbGUd3Bj3AZCfKDxpPgYqSOZCPxZBkZD")  # Token de acceso
+                    enviar_mensaje(sender_id, "Soy un robot y este es un mensaje de prueba desde Ranpu")
         return "OK", 200
     else:
         return "Error: No se pudo procesar el webhook", 400
 
 
+# Página principal
 @app.route('/')
 def home():
     return render_template('index.html')
 
+
+# Llamada inicial para obtener el token de larga duración
 if __name__ == '__main__':
+    get_long_lived_token()  # Obtener el token antes de iniciar la app
     app.run(port=5000)
+
