@@ -20,30 +20,6 @@ instagram_account_id = '108165015152868'
 graph_api_version = 'v21.0'
 messages_url = f'https://graph.facebook.com/{graph_api_version}/me/messages'
 accounts_url = f'https://graph.facebook.com/{graph_api_version}/me/accounts'
-token_url = f'https://graph.facebook.com/{graph_api_version}/oauth/access_token'
-
-# Función para obtener un token de larga duración para la App
-def get_long_lived_app_access_token():
-    global app_access_token
-    params = {
-        'grant_type': 'client_credentials',
-        'client_id': app_id,
-        'client_secret': app_secret
-    }
-    try:
-        response = requests.get(token_url, params=params)
-        response.raise_for_status()
-        token_data = response.json()
-        if 'access_token' in token_data:
-            app_access_token = token_data['access_token']
-            logger.info("Nuevo app_access_token de larga duración obtenido.")
-            return True
-        else:
-            logger.error(f"Error al obtener el app_access_token de larga duración: {token_data}")
-            return False
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Solicitud fallida al obtener el app_access_token: {e}")
-        return False
 
 # Función para obtener el Page Access Token desde me/accounts
 def obtener_page_access_token():
@@ -70,14 +46,9 @@ def obtener_page_access_token():
 
 # Función para renovar el Page Access Token
 def renovar_page_access_token():
-    """
-    Renueva el Page Access Token obteniendo un nuevo app_access_token y luego el Page Access Token.
-    """
-    logger.info("Renovando app_access_token y page_access_token...")
-    if get_long_lived_app_access_token():
-        if obtener_page_access_token():
-            logger.info("Renovación de Page Access Token completada.")
-            return True
+    if obtener_page_access_token():
+        logger.info("Renovación de Page Access Token completada.")
+        return True
     logger.error("No se pudo renovar el Page Access Token.")
     return False
 
@@ -161,13 +132,12 @@ def home():
 
 # Llamada inicial para obtener el app_access_token y el Page Access Token
 def inicializar_tokens():
-    if get_long_lived_app_access_token():
-        if obtener_page_access_token():
-            logger.info("Inicialización de tokens completada.")
-        else:
-            logger.error("Fallo al obtener el Page Access Token durante la inicialización.")
+    if obtener_page_access_token():
+        print(app_access_token)
+        print(page_access_token)
+        logger.info("Inicialización de tokens completada.")
     else:
-        logger.error("Fallo al obtener el app_access_token durante la inicialización.")
+        logger.error("Fallo al obtener el Page Access Token durante la inicialización.")
 
 if __name__ == '__main__':
     inicializar_tokens()  # Inicializar los tokens al iniciar la aplicación
