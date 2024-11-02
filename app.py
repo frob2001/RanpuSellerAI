@@ -17,43 +17,44 @@ app_access_token = 'EAAWLqclgZCHkBOZBZBrasdB3PiUgo2bwmbTY8Ox9ZCskHw2s7raqTMf9ZC2
 # Variables globales para el token de acceso y el ID de Instagram
 page_access_token = 'EAAWLqclgZCHkBO0Oyy3veuu6dfZCLWp4DtR6ZCl4ccZA7NJBH1TH5vJFm0GHmZBxyFwSkncXWC8MjN2KOICzwNcP1FPIhtPRfge9IYjrgyFBE6dAnyZA7bZCfAaa2QBDnT7fSqYYEvnCgx66BZC8Lip2MNZCn5duXNAoYtvf0LGKxwzUbnoZAfz4jwC3Q5S5jMnZC878k6E8Ix4JH36Yc5pzTpc2IZB3QJ6y'
 instagram_account_id = '108165015152868'
-url = f'https://graph.facebook.com/v12.0/me/messages'
+graph_api_version = 'v21.0'
+messages_url = f'https://graph.facebook.com/{graph_api_version}/me/messages'
+accounts_url = f'https://graph.facebook.com/{graph_api_version}/me/accounts'
+token_url = f'https://graph.facebook.com/{graph_api_version}/oauth/access_token'
 
-# Función para obtener un token de larga duración
-def get_long_lived_token():
-    global page_access_token
-    token_url = "https://graph.facebook.com/v12.0/oauth/access_token"
+# Función para obtener un token de larga duración para la App
+def get_long_lived_app_access_token():
+    global app_access_token
     params = {
-        'grant_type': 'fb_exchange_token',
+        'grant_type': 'client_credentials',
         'client_id': app_id,
-        'client_secret': app_secret,
-        'fb_exchange_token': app_access_token
+        'client_secret': app_secret
     }
     try:
         response = requests.get(token_url, params=params)
         response.raise_for_status()
         token_data = response.json()
-
         if 'access_token' in token_data:
-            page_access_token = token_data['access_token']
-            logger.info("Nuevo token de larga duración obtenido.")
+            app_access_token = token_data['access_token']
+            logger.info("Nuevo app_access_token de larga duración obtenido.")
+            return True
         else:
-            logger.error(f"Error al obtener el token de larga duración: {token_data}")
+            logger.error(f"Error al obtener el app_access_token de larga duración: {token_data}")
+            return False
     except requests.exceptions.RequestException as e:
-        logger.error(f"Solicitud fallida al obtener el token de larga duración: {e}")
+        logger.error(f"Solicitud fallida al obtener el app_access_token: {e}")
+        return False
 
 # Función para obtener el Page Access Token desde me/accounts
 def obtener_page_access_token():
     global page_access_token
-    accounts_url = "https://graph.facebook.com/v12.0/me/accounts"
     params = {
-        'access_token': page_access_token
+        'access_token': app_access_token
     }
     try:
         response = requests.get(accounts_url, params=params)
         response.raise_for_status()
         accounts_data = response.json()
-
         for account in accounts_data.get('data', []):
             if account['id'] == instagram_account_id:
                 new_page_access_token = account.get('access_token')
@@ -66,6 +67,19 @@ def obtener_page_access_token():
     except requests.exceptions.RequestException as e:
         logger.error(f"Solicitud fallida al obtener Page Access Token: {e}")
         return False
+
+# Función para renovar el Page Access Token
+def renovar_page_access_token():
+    """
+    Renueva el Page Access Token obteniendo un nuevo app_access_token y luego el Page Access Token.
+    """
+    logger.info("Renovando app_access_token y page_access_token...")
+    if get_long_lived_app_access_token():
+        if obtener_page_access_token():
+            logger.info("Renovación de Page Access Token completada.")
+            return True
+    logger.error("No se pudo renovar el Page Access Token.")
+    return False
 
 # Verificación inicial del webhook
 @app.route('/webhook', methods=['GET'])
@@ -95,7 +109,7 @@ def enviar_mensaje(recipient_id, message_text):
         'messaging_type': 'RESPONSE'
     }
     try:
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(messages_url, headers=headers, json=data)
         if response.status_code == 200:
             logger.info(f"Mensaje enviado correctamente a {recipient_id}")
         elif response.status_code in [400, 401, 403]:
@@ -104,7 +118,7 @@ def enviar_mensaje(recipient_id, message_text):
             if renovar_page_access_token():
                 # Reintentar enviar el mensaje con el nuevo token
                 headers['Authorization'] = f'Bearer {page_access_token}'
-                retry_response = requests.post(url, headers=headers, json=data)
+                retry_response = requests.post(messages_url, headers=headers, json=data)
                 if retry_response.status_code == 200:
                     logger.info(f"Mensaje enviado correctamente a {recipient_id} tras renovar el token.")
                 else:
@@ -115,17 +129,6 @@ def enviar_mensaje(recipient_id, message_text):
             logger.error(f"Error inesperado al enviar mensaje: {response.status_code}, {response.text}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Solicitud fallida al enviar mensaje: {e}")
-
-# Función para renovar el Page Access Token
-def renovar_page_access_token():
-    """
-    Renueva el Page Access Token obteniendo uno nuevo desde me/accounts.
-    """
-    # Primero, obtener un token de larga duración
-    get_long_lived_token()
-    
-    # Luego, obtener el nuevo Page Access Token
-    return obtener_page_access_token()
 
 # Manejo de notificaciones de mensajes de Instagram (POST)
 @app.route('/webhook', methods=['POST'])
@@ -156,13 +159,15 @@ def webhook():
 def home():
     return render_template('index.html')
 
-# Llamada inicial para obtener el token de larga duración y el Page Access Token
+# Llamada inicial para obtener el app_access_token y el Page Access Token
 def inicializar_tokens():
-    get_long_lived_token()  # Obtener el token de larga duración
-    if obtener_page_access_token():  # Obtener el Page Access Token
-        logger.info("Inicialización de tokens completada.")
+    if get_long_lived_app_access_token():
+        if obtener_page_access_token():
+            logger.info("Inicialización de tokens completada.")
+        else:
+            logger.error("Fallo al obtener el Page Access Token durante la inicialización.")
     else:
-        logger.error("Fallo en la inicialización de tokens.")
+        logger.error("Fallo al obtener el app_access_token durante la inicialización.")
 
 if __name__ == '__main__':
     inicializar_tokens()  # Inicializar los tokens al iniciar la aplicación
