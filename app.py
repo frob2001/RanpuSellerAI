@@ -7,31 +7,32 @@ app = Flask(__name__)
 # Datos de tu aplicación
 app_id = '1560936227863673'
 app_secret = '432eda601cb78df51bc55d2bf79d9f3e'
-short_lived_token = 'EAAWLqclgZCHkBOZBZBrasdB3PiUgo2bwmbTY8Ox9ZCskHw2s7raqTMf9ZC2HxiwrT1bNyZCMY6vcoHRq7Ao4zg2SeiU5yslBIqW01O0KmWu4TZC1Xn5ZB9ZABEGIjvwq0rDTuZAYIEQDSsAXtDdm4ZBisMwASxrlZBHl50PV4f2oVqfUOMERrs0o87qZAV0WB9MGHxWJW0Sp9C5wb7rJLKJBuio8ZD'
+app_access_token = 'EAAWLqclgZCHkBOZBZBrasdB3PiUgo2bwmbTY8Ox9ZCskHw2s7raqTMf9ZC2HxiwrT1bNyZCMY6vcoHRq7Ao4zg2SeiU5yslBIqW01O0KmWu4TZC1Xn5ZB9ZABEGIjvwq0rDTuZAYIEQDSsAXtDdm4ZBisMwASxrlZBHl50PV4f2oVqfUOMERrs0o87qZAV0WB9MGHxWJW0Sp9C5wb7rJLKJBuio8ZD'
 
 # Variables globales para el token de acceso y el ID de Instagram
-access_token = 'EAAWLqclgZCHkBO0Oyy3veuu6dfZCLWp4DtR6ZCl4ccZA7NJBH1TH5vJFm0GHmZBxyFwSkncXWC8MjN2KOICzwNcP1FPIhtPRfge9IYjrgyFBE6dAnyZA7bZCfAaa2QBDnT7fSqYYEvnCgx66BZC8Lip2MNZCn5duXNAoYtvf0LGKxwzUbnoZAfz4jwC3Q5S5jMnZC878k6E8Ix4JH36Yc5pzTpc2IZB3QJ6y'
+page_access_token = 'EAAWLqclgZCHkBO0Oyy3veuu6dfZCLWp4DtR6ZCl4ccZA7NJBH1TH5vJFm0GHmZBxyFwSkncXWC8MjN2KOICzwNcP1FPIhtPRfge9IYjrgyFBE6dAnyZA7bZCfAaa2QBDnT7fSqYYEvnCgx66BZC8Lip2MNZCn5duXNAoYtvf0LGKxwzUbnoZAfz4jwC3Q5S5jMnZC878k6E8Ix4JH36Yc5pzTpc2IZB3QJ6y'
 instagram_account_id = '108165015152868'
 url = f'https://graph.facebook.com/v12.0/me/messages'
 
 # Función para obtener un token de larga duración
 def get_long_lived_token():
-    global access_token
+    global page_access_token
     token_url = f"https://graph.facebook.com/v12.0/oauth/access_token"
     params = {
         'grant_type': 'fb_exchange_token',
         'client_id': app_id,
         'client_secret': app_secret,
-        'fb_exchange_token': short_lived_token
+        'fb_exchange_token': app_access_token
     }
     response = requests.get(token_url, params=params)
     token_data = response.json()
 
     if 'access_token' in token_data:
-        access_token = token_data['access_token']
-        print("Nuevo token obtenido:", access_token)
+        page_access_token = token_data['access_token']
+        print("Nuevo token obtenido:", page_access_token)
     else:
         print("Error al obtener el token de larga duración:", token_data)
+
 
 # Verificación inicial del webhook
 @app.route('/webhook', methods=['GET'])
@@ -47,10 +48,10 @@ def verify():
 
 # Función para enviar mensajes
 def enviar_mensaje(recipient_id, message_text):
-    global access_token   
+    global page_access_token   
     
     headers = {
-        'Authorization': f'Bearer {access_token}',
+        'Authorization': f'Bearer {page_access_token}',
         'Content-Type': 'application/json'
     }
     data = {
