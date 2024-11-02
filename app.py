@@ -1,6 +1,7 @@
 import requests
 from flask import Flask, request, render_template
 from chatgpt import obtener_respuesta_chatgpt 
+import time
 
 app = Flask(__name__)
 
@@ -14,9 +15,12 @@ access_token = 'EAAWLqclgZCHkBO7XxLWAz1FFnq6nM2vYWqpvpzYbM6klFeQLFf6EbbZBA9jQyZA
 instagram_account_id = '108165015152868'
 url = f'https://graph.facebook.com/v12.0/me/messages'
 
+# Variable para almacenar el tiempo de expiración del token
+token_expiration_time = None
+
 # Función para obtener un token de larga duración
 def get_long_lived_token():
-    global access_token
+    global access_token, token_expiration_time
     token_url = f"https://graph.facebook.com/v12.0/oauth/access_token"
     params = {
         'grant_type': 'fb_exchange_token',
@@ -29,6 +33,8 @@ def get_long_lived_token():
 
     if 'access_token' in token_data:
         access_token = token_data['access_token']
+        # Supongamos que el token de larga duración expira en 60 días
+        token_expiration_time = time.time() + 60 * 24 * 60 * 60  # 60 días en segundos
         print("Nuevo token obtenido:", access_token)
     else:
         print("Error al obtener el token de larga duración:", token_data)
@@ -46,26 +52,39 @@ def verify():
         return "Error de verificación", 403
 
 # Función para enviar mensajes
-def enviar_mensaje(recipient_id, message_text):
-    global access_token
+def enviar_mensaje(recipient_id, message_text, retry=True):
+    global access_token, token_expiration_time
     
+    # Verificar si el token ha expirado según nuestro registro
+    if token_expiration_time and time.time() > token_expiration_time:
+        print("Token expirado según el tiempo registrado. Obteniendo uno nuevo.")
+        get_long_lived_token()
+
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
     }
     data = {
         'recipient': {'id': recipient_id},
-        'message': {'text': message_text},  # Utiliza el texto proporcionado
+        'message': {'text': message_text},
         'messaging_type': 'RESPONSE'
     }
     response = requests.post(url, headers=headers, json=data)
     
     if response.status_code == 200:
         print(f"Mensaje enviado correctamente a {recipient_id}")
+    elif response.status_code in [400, 401, 403] and retry:
+        error_data = response.json()
+        error_message = error_data.get('error', {}).get('message', '')
+        print(f"Error al enviar mensaje: {response.status_code}, {response.text}")
+        # Verificar si el error está relacionado con el token
+        if 'invalid_token' in error_message or 'expired' in error_message:
+            print("Token inválido o expirado. Intentando obtener uno nuevo.")
+            get_long_lived_token()
+            # Reintentar enviar el mensaje una vez
+            enviar_mensaje(recipient_id, message_text, retry=False)
     else:
         print(f"Error al enviar mensaje: {response.status_code}, {response.text}")
-
-
 
 # Manejo de notificaciones de mensajes de Instagram (POST)
 @app.route('/webhook', methods=['POST'])
