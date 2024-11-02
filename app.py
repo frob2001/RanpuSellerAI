@@ -13,10 +13,10 @@ logger = logging.getLogger(__name__)
 # Datos de tu aplicación
 app_id = os.getenv("FACEBOOK_APP_ID") #SE ENCUENTRAN EN EL SERVIDOR
 app_secret = os.getenv("FACEBOOK_APP_SECRET")
-app_access_token = os.getenv("APP_ACCESS_TOKEN")
+user_access_token = os.getenv("USER_ACCESS_TOKEN")
 
 # Variables globales para el token de acceso y el ID de Instagram
-page_access_token = '' #SE GENERA AUTOMATICAMENTE DEPENDE DE APP_ACCESS_TOKEN
+page_access_token = '' #SE GENERA AUTOMATICAMENTE DEPENDE DE USER_ACCESS_TOKEN
 instagram_account_id = os.getenv("INSTAGRAM_ACCOUNT_ID")
 
 
@@ -28,7 +28,7 @@ accounts_url = f'https://graph.facebook.com/{graph_api_version}/me/accounts'
 def obtener_page_access_token():
     global page_access_token
     params = {
-        'access_token': app_access_token
+        'access_token': user_access_token
     }
     try:
         response = requests.get(accounts_url, params=params)
@@ -133,11 +133,9 @@ def webhook():
 def home():
     return render_template('index.html')
 
-# Llamada inicial para obtener el app_access_token y el Page Access Token
+# Llamada inicial para obtener Page Access Token
 def inicializar_tokens():
     if obtener_page_access_token():
-        print(app_access_token)
-        print(page_access_token)
         logger.info("Inicialización de tokens completada.")
     else:
         logger.error("Fallo al obtener el Page Access Token durante la inicialización.")
