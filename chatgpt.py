@@ -34,7 +34,7 @@ def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
 
     # Enviar el historial completo a la API para mantener la conversación
     response = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
+        model="gpt-3.5-turbo",
         messages=conversacion_historial[user_id],
         max_tokens=50
     )
