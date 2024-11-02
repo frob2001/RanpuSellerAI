@@ -47,10 +47,7 @@ def verify():
 
 # Función para enviar mensajes
 def enviar_mensaje(recipient_id, message_text):
-    global access_token
-    
-    # Llamada a OpenAI para obtener la respuesta
-    respuesta_chatgpt = obtener_respuesta_chatgpt(message_text)
+    global access_token   
     
     headers = {
         'Authorization': f'Bearer {access_token}',
@@ -58,7 +55,7 @@ def enviar_mensaje(recipient_id, message_text):
     }
     data = {
         'recipient': {'id': recipient_id},
-        'message': {'text': respuesta_chatgpt},  # Utiliza la respuesta generada por ChatGPT
+        'message': {'text': message_text},  # Utiliza la respuesta generada por ChatGPT
         'messaging_type': 'RESPONSE'
     }
     response = requests.post(url, headers=headers, json=data)
