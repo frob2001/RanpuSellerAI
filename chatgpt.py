@@ -28,4 +28,4 @@ def obtener_respuesta_chatgpt(mensaje_usuario):
         ],
         max_tokens=50
     )
-    return response.choices[0].message["content"]
+    return response['choices'][0]['message']['content']
