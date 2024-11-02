@@ -49,16 +49,13 @@ def verify():
 def enviar_mensaje(recipient_id, message_text):
     global access_token
     
-    # Llamada a OpenAI para obtener la respuesta
-    respuesta_chatgpt = obtener_respuesta_chatgpt(message_text)
-    
     headers = {
         'Authorization': f'Bearer {access_token}',
         'Content-Type': 'application/json'
     }
     data = {
         'recipient': {'id': recipient_id},
-        'message': {'text': respuesta_chatgpt},  # Utiliza la respuesta generada por ChatGPT
+        'message': {'text': message_text},  # Utiliza el texto proporcionado
         'messaging_type': 'RESPONSE'
     }
     response = requests.post(url, headers=headers, json=data)
@@ -67,6 +64,7 @@ def enviar_mensaje(recipient_id, message_text):
         print(f"Mensaje enviado correctamente a {recipient_id}")
     else:
         print(f"Error al enviar mensaje: {response.status_code}, {response.text}")
+
 
 
 # Manejo de notificaciones de mensajes de Instagram (POST)
@@ -84,7 +82,8 @@ def webhook():
                     if 'message' in messaging_event:
                         message_text = messaging_event['message'].get('text')
                         print(f"Nuevo mensaje de {sender_id}: {message_text}")
-                        enviar_mensaje(sender_id, "Soy un robot y este es un mensaje de prueba desde Ranpu")
+                        respuesta_chatgpt = obtener_respuesta_chatgpt(message_text)
+                        enviar_mensaje(sender_id, respuesta_chatgpt)
         return "OK", 200
     else:
         return "Error: No se pudo procesar el webhook", 400
