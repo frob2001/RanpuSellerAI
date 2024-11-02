@@ -105,6 +105,7 @@ def enviar_mensaje(recipient_id, message_text):
         logger.error(f"Solicitud fallida al enviar mensaje: {e}")
 
 # Manejo de notificaciones de mensajes de Instagram (POST)
+# Función que maneja la recepción de mensajes de Instagram
 @app.route('/webhook', methods=['POST'])
 def webhook():
     logger.info("Solicitud POST recibida en /webhook")
@@ -121,12 +122,14 @@ def webhook():
                     message_text = message.get('text')
                     if message_text:
                         logger.info(f"Nuevo mensaje de {sender_id}: {message_text}")
-                        respuesta_chatgpt = obtener_respuesta_chatgpt(message_text)
+                        # Llama a obtener_respuesta_chatgpt pasando sender_id para mantener la conversación
+                        respuesta_chatgpt = obtener_respuesta_chatgpt(message_text, sender_id)
                         enviar_mensaje(sender_id, respuesta_chatgpt)
         return "OK", 200
     else:
         logger.warning("Datos inválidos recibidos en el webhook.")
         return "Error: No se pudo procesar el webhook", 400
+
 
 # Página principal
 @app.route('/')
