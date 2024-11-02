@@ -11,7 +11,7 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 # Función para obtener la respuesta de ChatGPT
 def obtener_respuesta_chatgpt(mensaje_usuario):
     response = openai.ChatCompletion.create(
-        model="gpt-4-turbo",
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": (
                 "Eres Ranpu, la inteligencia artificial de la empresa de lámparas 3D personalizadas. "
