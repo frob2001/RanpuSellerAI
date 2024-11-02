@@ -2,6 +2,7 @@ import requests
 from flask import Flask, request, render_template
 from chatgpt import obtener_respuesta_chatgpt 
 import logging
+import os
 
 app = Flask(__name__)
 
@@ -10,13 +11,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Datos de tu aplicación
-app_id = '1560936227863673'
-app_secret = '432eda601cb78df51bc55d2bf79d9f3e'
-app_access_token = 'EAAWLqclgZCHkBOZBZBrasdB3PiUgo2bwmbTY8Ox9ZCskHw2s7raqTMf9ZC2HxiwrT1bNyZCMY6vcoHRq7Ao4zg2SeiU5yslBIqW01O0KmWu4TZC1Xn5ZB9ZABEGIjvwq0rDTuZAYIEQDSsAXtDdm4ZBisMwASxrlZBHl50PV4f2oVqfUOMERrs0o87qZAV0WB9MGHxWJW0Sp9C5wb7rJLKJBuio8ZD'
+app_id = os.getenv("FACEBOOK_APP_ID") #SE ENCUENTRAN EN EL SERVIDOR
+app_secret = os.getenv("FACEBOOK_APP_SECRET")
+app_access_token = os.getenv("APP_ACCESS_TOKEN")
 
 # Variables globales para el token de acceso y el ID de Instagram
-page_access_token = ''
-instagram_account_id = '108165015152868'
+page_access_token = '' #SE GENERA AUTOMATICAMENTE DEPENDE DE APP_ACCESS_TOKEN
+instagram_account_id = os.getenv("INSTAGRAM_ACCOUNT_ID")
+
+
 graph_api_version = 'v21.0'
 messages_url = f'https://graph.facebook.com/{graph_api_version}/me/messages'
 accounts_url = f'https://graph.facebook.com/{graph_api_version}/me/accounts'
