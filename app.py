@@ -15,7 +15,7 @@ app_secret = '432eda601cb78df51bc55d2bf79d9f3e'
 app_access_token = 'EAAWLqclgZCHkBOZBZBrasdB3PiUgo2bwmbTY8Ox9ZCskHw2s7raqTMf9ZC2HxiwrT1bNyZCMY6vcoHRq7Ao4zg2SeiU5yslBIqW01O0KmWu4TZC1Xn5ZB9ZABEGIjvwq0rDTuZAYIEQDSsAXtDdm4ZBisMwASxrlZBHl50PV4f2oVqfUOMERrs0o87qZAV0WB9MGHxWJW0Sp9C5wb7rJLKJBuio8ZD'
 
 # Variables globales para el token de acceso y el ID de Instagram
-page_access_token = 'EAAWLqclgZCHkBO0Oyy3veuu6dfZCLWp4DtR6ZCl4ccZA7NJBH1TH5vJFm0GHmZBxyFwSkncXWC8MjN2KOICzwNcP1FPIhtPRfge9IYjrgyFBE6dAnyZA7bZCfAaa2QBDnT7fSqYYEvnCgx66BZC8Lip2MNZCn5duXNAoYtvf0LGKxwzUbnoZAfz4jwC3Q5S5jMnZC878k6E8Ix4JH36Yc5pzTpc2IZB3QJ6y'
+page_access_token = ''
 instagram_account_id = '108165015152868'
 graph_api_version = 'v21.0'
 messages_url = f'https://graph.facebook.com/{graph_api_version}/me/messages'
