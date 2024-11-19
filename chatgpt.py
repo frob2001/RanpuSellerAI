@@ -1,6 +1,9 @@
 import openai
 from dotenv import load_dotenv
 import os
+from datetime import datetime, timedelta
+import threading
+import time
 
 # Cargar variables de entorno
 load_dotenv()
@@ -10,9 +13,46 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Diccionario para almacenar el historial de conversaciones por usuario
 conversacion_historial = {}
+FECHA_INICIO = datetime.now()  # Registrar la fecha de inicio del sistema
+TIEMPO_MAXIMO_HISTORIAL = timedelta(days=15)  # Tiempo máximo para resetear la variable
+
+
+# Función para reiniciar el historial después de 15 días
+def verificar_y_resetear_historial():
+    global conversacion_historial, FECHA_INICIO
+    ahora = datetime.now()
+    
+    # Si han pasado más de 15 días desde el inicio, reinicia la variable
+    if ahora - FECHA_INICIO > TIEMPO_MAXIMO_HISTORIAL:
+        conversacion_historial = {}  # Reinicia el historial completo
+        FECHA_INICIO = datetime.now()  # Actualiza la fecha de inicio
+
+
+# Función en un hilo separado para mostrar el tiempo restante cada minuto
+def mostrar_tiempo_restante():
+    global FECHA_INICIO, TIEMPO_MAXIMO_HISTORIAL
+    while True:
+        ahora = datetime.now()
+        tiempo_restante = TIEMPO_MAXIMO_HISTORIAL - (ahora - FECHA_INICIO)
+        
+        if tiempo_restante.total_seconds() > 0:
+            print(f"Tiempo restante para eliminar el historial: {tiempo_restante}")
+        else:
+            print("El historial ha sido eliminado. Reiniciando conteo.")
+        
+        time.sleep(60)  # Espera un minuto antes de volver a calcular
+
+
+# Inicia el hilo para mostrar el tiempo restante
+thread = threading.Thread(target=mostrar_tiempo_restante, daemon=True)
+thread.start()
 
 # Función para obtener la respuesta de ChatGPT
 def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
+    # Verificar si es necesario reiniciar el historial completo
+    verificar_y_resetear_historial()
+
+
     # Inicializar el historial de mensajes para el usuario si no existe
     if user_id not in conversacion_historial:
         conversacion_historial[user_id] = [
@@ -56,7 +96,7 @@ def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=conversacion_historial[user_id],
-        max_tokens=150,  # Ajusta este valor si es necesario
+        max_tokens=150,
         temperature=0.7,
         n=1,
         stop=None
