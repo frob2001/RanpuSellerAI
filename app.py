@@ -78,7 +78,10 @@ def verify():
 
 # Función para enviar mensajes
 def enviar_mensaje(recipient_id, message_text):
-    global page_access_token   
+    global page_access_token
+
+    if recipient_id == 17841451060597045:
+        return "OK", 200
     
     headers = {
         'Authorization': f'Bearer {page_access_token}',
