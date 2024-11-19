@@ -1,12 +1,31 @@
 import openai
 from dotenv import load_dotenv
 import os
+from datetime import datetime, timedelta
+
+# Tiempo de inicio del historial y duración máxima (15 días)
+FECHA_INICIO = datetime.now()
+TIEMPO_MAXIMO_HISTORIAL = timedelta(days=15)
 
 # Cargar variables de entorno
 load_dotenv()
 
 # Configuración de la clave de API de OpenAI
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+def tiempo_restante():
+    ahora = datetime.now()
+    tiempo_restante = TIEMPO_MAXIMO_HISTORIAL - (ahora - FECHA_INICIO)
+    if tiempo_restante.total_seconds() > 0:
+        return str(tiempo_restante).split('.')[0]  # Retorna formato HH:MM:SS
+    else:
+        # Limpia el historial si el tiempo ha expirado
+        global conversacion_historial, FECHA_INICIO
+        conversacion_historial = {}
+        FECHA_INICIO = datetime.now()  # Reinicia el contador
+        return "00:00:00"
+
 
 # Diccionario para almacenar el historial de conversaciones por usuario
 conversacion_historial = {}

@@ -1,6 +1,6 @@
 import requests
 from flask import Flask, request, render_template, redirect, url_for, session, flash
-from chatgpt import obtener_respuesta_chatgpt, conversacion_historial 
+from chatgpt import obtener_respuesta_chatgpt, conversacion_historial, tiempo_restante
 import logging
 import os
 
@@ -173,7 +173,12 @@ def console():
         flash("Debes iniciar sesión para acceder a esta página.", "warning")
         return redirect(url_for('login'))
     
-    return render_template('console.html', historial_global=conversacion_historial)  # Pasa el historial completo
+    tiempo_para_borrado = tiempo_restante()  # Calcula el tiempo restante
+    return render_template(
+        'console.html',
+        historial_global=conversacion_historial,
+        tiempo_para_borrado=tiempo_para_borrado
+    )
 
 # Página principal
 @app.route('/')
