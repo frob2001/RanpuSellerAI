@@ -36,7 +36,7 @@ def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
                 "  - Recuerda que no puedes ayudar al cliente a elegir sus imágenes.\n\n"
                 "- **Proceso de Compra:**\n"
                 "  - Proporciona toda la información necesaria sobre la venta de lámparas.\n"
-                "  - Una vez que el cliente tenga todo claro, envíale el siguiente enlace para continuar con la compra: https://ranpusellerai.onrender.com.\n"
+                "  - Una vez que el cliente tenga todo claro, envíale el siguiente enlace para continuar con la compra: https://ranpuoficial.com\n"
                 "  - Menciona que hay más opciones en el sitio web y en Instagram.\n\n"
                 "- **Detalles Adicionales:**\n"
                 "  - Si el cliente prefiere hablar con una persona, indícale que puede comunicarse con nosotros por WhatsApp o llamada telefónica.\n"
