@@ -79,9 +79,6 @@ def verify():
 # Función para enviar mensajes
 def enviar_mensaje(recipient_id, message_text):
     global page_access_token
-
-    if recipient_id == 17841451060597045:
-        return "OK", 200
     
     headers = {
         'Authorization': f'Bearer {page_access_token}',
@@ -134,8 +131,7 @@ def webhook():
                         logger.info(f"Nuevo mensaje de {sender_id}: {message_text}")
                         # Llama a obtener_respuesta_chatgpt pasando sender_id para mantener la conversación
                         respuesta_chatgpt = obtener_respuesta_chatgpt(message_text, sender_id)
-                        if sender_id != 17841451060597045:
-                            enviar_mensaje(sender_id, respuesta_chatgpt)
+                        enviar_mensaje(sender_id, respuesta_chatgpt)
         return "OK", 200
     else:
         logger.warning("Datos inválidos recibidos en el webhook.")
