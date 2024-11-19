@@ -94,7 +94,7 @@ def enviar_mensaje(recipient_id, message_text):
         if response.status_code == 200:
             logger.info(f"Mensaje enviado correctamente a {recipient_id}")
         elif response.status_code in [400, 401, 403]:
-            logger.warning(f"Error al enviar mensaje: {response.status_code}, {response.text}")
+            logger.warning(f"Error al enviar mensaje: {response.status_code}, {response.text} a {recipient_id}")
             logger.info("Intentando renovar el Page Access Token...")
             if renovar_page_access_token():
                 # Reintentar enviar el mensaje con el nuevo token

@@ -36,7 +36,7 @@ def mostrar_tiempo_restante():
         tiempo_restante = TIEMPO_MAXIMO_HISTORIAL - (ahora - FECHA_INICIO)
         
         if tiempo_restante.total_seconds() > 0:
-            print(f"Tiempo restante para eliminar el historial: {tiempo_restante, conversacion_historial}")
+            print(f"Tiempo restante para eliminar el historial: {tiempo_restante}")
         else:
             print("El historial ha sido eliminado. Reiniciando conteo.")
         
