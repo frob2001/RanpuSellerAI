@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 
 FECHA_INICIO = datetime.now()
-TIEMPO_MAXIMO_HISTORIAL = timedelta(days=15)
+TIEMPO_MAXIMO_HISTORIAL = timedelta(days=1)
 
 # Cargar variables de entorno
 load_dotenv()
