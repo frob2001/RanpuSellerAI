@@ -78,7 +78,7 @@ def verify():
 
 # Función para enviar mensajes
 def enviar_mensaje(recipient_id, message_text):
-    global page_access_token   
+    global page_access_token
     
     headers = {
         'Authorization': f'Bearer {page_access_token}',
@@ -92,16 +92,16 @@ def enviar_mensaje(recipient_id, message_text):
     try:
         response = requests.post(messages_url, headers=headers, json=data)
         if response.status_code == 200:
-            logger.info(f"Mensaje enviado correctamente a {recipient_id}")
+            logger.info(f"Mensaje enviado correctamente al usuario: {recipient_id}")
         elif response.status_code in [400, 401, 403]:
-            logger.warning(f"Error al enviar mensaje: {response.status_code}, {response.text} a {recipient_id}")
+            logger.warning(f"Error al enviar mensaje: {response.status_code}, {response.text} al usuario {recipient_id}")
             logger.info("Intentando renovar el Page Access Token...")
             if renovar_page_access_token():
                 # Reintentar enviar el mensaje con el nuevo token
                 headers['Authorization'] = f'Bearer {page_access_token}'
                 retry_response = requests.post(messages_url, headers=headers, json=data)
                 if retry_response.status_code == 200:
-                    logger.info(f"Mensaje enviado correctamente a {recipient_id} tras renovar el token.")
+                    logger.info(f"Mensaje enviado correctamente al usuario {recipient_id} tras renovar el token.")
                 else:
                     logger.error(f"Error al enviar mensaje tras renovar el token: {retry_response.status_code}, {retry_response.text}")
             else:
@@ -110,6 +110,7 @@ def enviar_mensaje(recipient_id, message_text):
             logger.error(f"Error inesperado al enviar mensaje: {response.status_code}, {response.text}")
     except requests.exceptions.RequestException as e:
         logger.error(f"Solicitud fallida al enviar mensaje: {e}")
+        
 
 # Manejo de notificaciones de mensajes de Instagram (POST)
 # Función que maneja la recepción de mensajes de Instagram
