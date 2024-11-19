@@ -124,7 +124,13 @@ def webhook():
             for messaging_event in entry.get('messaging', []):
                 sender = messaging_event.get('sender', {})
                 sender_id = sender.get('id')
-                if ((sender_id and 'message' in messaging_event) and sender_id != 17841451060597045):
+
+                # Ignorar mensajes provenientes del ID del bot
+                if sender_id == "17841451060597045":
+                    logger.warning(f"Mensaje recibido del bot (ID: {sender_id}). Ignorando...")
+                    continue
+
+                if sender_id and 'message' in messaging_event:
                     message = messaging_event['message']
                     message_text = message.get('text')
                     if message_text:
