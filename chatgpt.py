@@ -105,9 +105,6 @@ def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
     # Obtener la respuesta de ChatGPT
     respuesta = response['choices'][0]['message']['content'].strip()
 
-    # Agregar la respuesta de ChatGPT al historial
-    conversacion_historial[user_id].append({"role": "assistant", "content": respuesta})
-
     print(conversacion_historial)
 
     return respuesta

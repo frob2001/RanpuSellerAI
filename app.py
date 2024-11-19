@@ -124,7 +124,7 @@ def webhook():
             for messaging_event in entry.get('messaging', []):
                 sender = messaging_event.get('sender', {})
                 sender_id = sender.get('id')
-                if sender_id and 'message' in messaging_event:
+                if ((sender_id and 'message' in messaging_event) and sender_id != 17841451060597045):
                     message = messaging_event['message']
                     message_text = message.get('text')
                     if message_text:
