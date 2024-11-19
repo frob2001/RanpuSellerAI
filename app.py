@@ -1,10 +1,17 @@
 import requests
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect, url_for, session, flash
 from chatgpt import obtener_respuesta_chatgpt 
 import logging
 import os
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecretkey")  # Cambia por un valor seguro
+
+# Datos de prueba
+TEST_USER = {
+    "email": "ranpumetatest@ranpuoficial.com",
+    "password": "kJy2119$u"
+}
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -130,6 +137,37 @@ def webhook():
         logger.warning("Datos inválidos recibidos en el webhook.")
         return "Error: No se pudo procesar el webhook", 400
 
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        # Validación de credenciales
+        if email == TEST_USER["email"] and password == TEST_USER["password"]:
+            session['user'] = email  # Almacenar el usuario en la sesión
+            flash("Inicio de sesión exitoso.", "success")
+            return redirect(url_for('console'))
+        else:
+            flash("Credenciales incorrectas.", "danger")
+            return redirect(url_for('login'))
+    
+    return render_template('login.html')  # Muestra un formulario de inicio de sesión
+
+@app.route('/logout')
+def logout():
+    session.pop('user', None)  # Eliminar el usuario de la sesión
+    flash("Sesión cerrada correctamente.", "success")
+    return redirect(url_for('login'))
+
+@app.route('/console')
+def console():
+    if 'user' not in session:  # Verifica si el usuario está autenticado
+        flash("Debes iniciar sesión para acceder a esta página.", "warning")
+        return redirect(url_for('login'))
+    
+    return render_template('console.html')  # Muestra la página protegida
 
 # Página principal
 @app.route('/')
