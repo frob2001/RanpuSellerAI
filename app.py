@@ -3,7 +3,8 @@ from flask import Flask, request, render_template, redirect, url_for, session, f
 from chatgpt import obtener_respuesta_chatgpt, conversacion_historial, tiempo_restante
 import logging
 import os
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageEnhance
+import base64
 import io
 
 app = Flask(__name__)
@@ -183,19 +184,23 @@ def console():
     )
 
 
-def apply_lithophane_filter(image):
+def apply_lithophane_no_light(image):
     """
-    Convierte la imagen en una simulación de litofanía.
+    Simula una litofanía sin luz de fondo.
     """
-    # Convertir a escala de grises
     grayscale = ImageOps.grayscale(image)
-
-    # Invertir los colores para simular relieve (negro como el punto más alto)
     inverted = ImageOps.invert(grayscale)
-
-    # Aumentar contraste para mayor efecto de litofanía
     high_contrast = ImageOps.autocontrast(inverted)
+    return high_contrast
 
+def apply_lithophane_with_light(image):
+    """
+    Simula una litofanía con luz de fondo.
+    """
+    grayscale = ImageOps.grayscale(image)
+    enhancer = ImageEnhance.Brightness(grayscale)
+    brighter = enhancer.enhance(1.5)  # Incrementar brillo
+    high_contrast = ImageOps.autocontrast(brighter)
     return high_contrast
 
 @app.route('/convert', methods=['POST'])
@@ -207,16 +212,28 @@ def convert_image():
     image_file = request.files['image']
     image = Image.open(image_file)
 
-    # Aplicar el filtro de litofanía
-    filtered_image = apply_lithophane_filter(image)
+    # Generar ambas versiones de la imagen
+    no_light_image = apply_lithophane_no_light(image)
+    with_light_image = apply_lithophane_with_light(image)
 
-    # Guardar la imagen en memoria para enviar como respuesta
-    img_io = io.BytesIO()
-    filtered_image.save(img_io, 'PNG')
-    img_io.seek(0)
+    # Guardar las imágenes en memoria y convertirlas a Base64
+    no_light_io = io.BytesIO()
+    no_light_image.save(no_light_io, 'PNG')
+    no_light_io.seek(0)
+    no_light_base64 = base64.b64encode(no_light_io.getvalue()).decode()
 
-    return send_file(img_io, mimetype='image/png')
+    with_light_io = io.BytesIO()
+    with_light_image.save(with_light_io, 'PNG')
+    with_light_io.seek(0)
+    with_light_base64 = base64.b64encode(with_light_io.getvalue()).decode()
 
+    # Devolver las imágenes como Base64
+    return jsonify({
+        "no_light": f"data:image/png;base64,{no_light_base64}",
+        "with_light": f"data:image/png;base64,{with_light_base64}"
+    })
+
+    return response
 # Página principal
 @app.route('/')
 def home():
