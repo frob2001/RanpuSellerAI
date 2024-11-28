@@ -1,10 +1,9 @@
 import requests
-from flask import Flask, request, render_template, redirect, url_for, session, flash, jsonify, send_file
+from flask import Flask, request, render_template, redirect, url_for, session, flash, send_file
 from chatgpt import obtener_respuesta_chatgpt, conversacion_historial, tiempo_restante
 import logging
 import os
 from PIL import Image, ImageOps, ImageEnhance
-import base64
 import io
 
 app = Flask(__name__)
@@ -203,37 +202,45 @@ def apply_lithophane_with_light(image):
     high_contrast = ImageOps.autocontrast(brighter)
     return high_contrast
 
-@app.route('/convert', methods=['POST'])
-def convert_image():
+@app.route('/convert/no-light', methods=['POST'])
+def convert_image_no_light():
     if 'image' not in request.files:
-        return jsonify({'error': 'No image file provided'}), 400
+        return {"error": "No image file provided"}, 400
 
     # Leer la imagen del archivo enviado
     image_file = request.files['image']
     image = Image.open(image_file)
 
-    # Generar ambas versiones de la imagen
+    # Aplicar filtro sin luz
     no_light_image = apply_lithophane_no_light(image)
+
+    # Guardar la imagen en memoria
+    img_io = io.BytesIO()
+    no_light_image.save(img_io, 'PNG')
+    img_io.seek(0)
+
+    return send_file(img_io, mimetype='image/png')
+
+@app.route('/convert/with-light', methods=['POST'])
+def convert_image_with_light():
+    if 'image' not in request.files:
+        return {"error": "No image file provided"}, 400
+
+    # Leer la imagen del archivo enviado
+    image_file = request.files['image']
+    image = Image.open(image_file)
+
+    # Aplicar filtro con luz
     with_light_image = apply_lithophane_with_light(image)
 
-    # Guardar las imágenes en memoria y convertirlas a Base64
-    no_light_io = io.BytesIO()
-    no_light_image.save(no_light_io, 'PNG')
-    no_light_io.seek(0)
-    no_light_base64 = base64.b64encode(no_light_io.getvalue()).decode()
+    # Guardar la imagen en memoria
+    img_io = io.BytesIO()
+    with_light_image.save(img_io, 'PNG')
+    img_io.seek(0)
 
-    with_light_io = io.BytesIO()
-    with_light_image.save(with_light_io, 'PNG')
-    with_light_io.seek(0)
-    with_light_base64 = base64.b64encode(with_light_io.getvalue()).decode()
+    return send_file(img_io, mimetype='image/png')
 
-    # Devolver las imágenes como Base64
-    return jsonify({
-        "no_light": f"data:image/png;base64,{no_light_base64}",
-        "with_light": f"data:image/png;base64,{with_light_base64}"
-    })
 
-    return response
 # Página principal
 @app.route('/')
 def home():
