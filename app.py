@@ -1,8 +1,10 @@
 import requests
-from flask import Flask, request, render_template, redirect, url_for, session, flash
+from flask import Flask, request, render_template, redirect, url_for, session, flash, jsonify, send_file
 from chatgpt import obtener_respuesta_chatgpt, conversacion_historial, tiempo_restante
 import logging
 import os
+from PIL import Image, ImageOps
+import io
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecretkey")  # Cambia por un valor seguro
@@ -179,6 +181,41 @@ def console():
         historial_global=conversacion_historial,
         tiempo_para_borrado=tiempo_para_borrado
     )
+
+
+def apply_lithophane_filter(image):
+    """
+    Convierte la imagen en una simulación de litofanía.
+    """
+    # Convertir a escala de grises
+    grayscale = ImageOps.grayscale(image)
+
+    # Invertir los colores para simular relieve (negro como el punto más alto)
+    inverted = ImageOps.invert(grayscale)
+
+    # Aumentar contraste para mayor efecto de litofanía
+    high_contrast = ImageOps.autocontrast(inverted)
+
+    return high_contrast
+
+@app.route('/convert', methods=['POST'])
+def convert_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+
+    # Leer la imagen del archivo enviado
+    image_file = request.files['image']
+    image = Image.open(image_file)
+
+    # Aplicar el filtro de litofanía
+    filtered_image = apply_lithophane_filter(image)
+
+    # Guardar la imagen en memoria para enviar como respuesta
+    img_io = io.BytesIO()
+    filtered_image.save(img_io, 'PNG')
+    img_io.seek(0)
+
+    return send_file(img_io, mimetype='image/png')
 
 # Página principal
 @app.route('/')
