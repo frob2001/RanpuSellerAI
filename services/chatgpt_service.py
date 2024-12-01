@@ -2,8 +2,8 @@ import openai
 from config import config
 
 # Configuración de la clave de API de OpenAI desde la configuración cargada
-app_config = config['development']()  # Cambia a 'production' en producción
-openai.api_key = app_config.OPENAI_API_KEY
+app_config = config['production']
+openai.api_key = app_config['OPENAI_API_KEY']
 
 # Diccionario para almacenar el historial de conversaciones por usuario
 conversation_history = {}
