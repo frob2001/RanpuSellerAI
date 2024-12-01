@@ -1,37 +1,25 @@
 import openai
-from dotenv import load_dotenv
-import os
-# Variables globales
-from datetime import datetime, timedelta
+from config import config
 
-FECHA_INICIO = datetime.now()
-TIEMPO_MAXIMO_HISTORIAL = timedelta(days=1)
-
-# Cargar variables de entorno
-load_dotenv()
-
-# Configuración de la clave de API de OpenAI
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
-
-def time_remaining():
-    global conversation_history, FECHA_INICIO  # Declara como global antes de usar
-    ahora = datetime.now()
-    time_remaining = TIEMPO_MAXIMO_HISTORIAL - (ahora - FECHA_INICIO)
-    if time_remaining.total_seconds() > 0:
-        return str(time_remaining).split('.')[0]  # Retorna formato HH:MM:SS
-    else:
-        # Limpia el historial si el tiempo ha expirado
-        conversation_history.clear()  # Limpia el historial
-        FECHA_INICIO = datetime.now()  # Reinicia el contador
-        return "00:00:00"
-
+# Configuración de la clave de API de OpenAI desde la configuración cargada
+app_config = config['development']()  # Cambia a 'production' en producción
+openai.api_key = app_config.OPENAI_API_KEY
 
 # Diccionario para almacenar el historial de conversaciones por usuario
 conversation_history = {}
 
 # Función para obtener la respuesta de ChatGPT
 def get_chatgpt_response(mensaje_usuario, user_id):
+    """
+    Genera una respuesta de ChatGPT basada en el historial de conversación y el mensaje del usuario.
+
+    Args:
+        mensaje_usuario (str): Mensaje enviado por el usuario.
+        user_id (str): Identificador único del usuario.
+
+    Returns:
+        str: Respuesta generada por ChatGPT.
+    """
     # Ignorar cualquier mensaje proveniente del ID del bot
     if user_id == "17841451060597045":
         return ""
@@ -75,19 +63,37 @@ def get_chatgpt_response(mensaje_usuario, user_id):
     # Agregar el mensaje del usuario al historial
     conversation_history[user_id].append({"role": "user", "content": mensaje_usuario})
 
-    # Generar la respuesta del asistente
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=conversation_history[user_id],
-        max_tokens=150,
-        temperature=0.7
-    )
+    try:
+        # Generar la respuesta del asistente
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=conversation_history[user_id],
+            max_tokens=150,
+            temperature=0.7
+        )
 
-    # Obtener la respuesta generada
-    respuesta = response['choices'][0]['message']['content'].strip()
+        # Obtener la respuesta generada
+        respuesta = response['choices'][0]['message']['content'].strip()
 
-    # Agregar la respuesta del asistente al historial
-    conversation_history[user_id].append({"role": "assistant", "content": respuesta})
+        # Agregar la respuesta del asistente al historial
+        conversation_history[user_id].append({"role": "assistant", "content": respuesta})
 
-    return respuesta
+        return respuesta
 
+    except openai.error.OpenAIError as e:
+        # Manejo de errores de OpenAI
+        print(f"Error en la API de OpenAI: {e}")
+        return "Lo siento, hubo un problema al procesar tu solicitud. Por favor, intenta nuevamente más tarde."
+
+    except Exception as e:
+        # Manejo de errores generales
+        print(f"Error desconocido: {e}")
+        return "Ocurrió un error inesperado. Por favor, contacta a soporte técnico."
+
+
+# Ejemplo de uso para pruebas locales
+if __name__ == "__main__":
+    test_user_id = "123456789"
+    test_message = "Hola, ¿cuánto cuestan las lámparas?"
+    response = get_chatgpt_response(test_message, test_user_id)
+    print(response)

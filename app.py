@@ -1,5 +1,5 @@
 import requests
-from flask import Flask, request, render_template, redirect, url_for, session, flash, send_file
+from flask import Flask, request, render_template, send_file
 import logging
 from config import config
 from services import (
@@ -8,9 +8,7 @@ from services import (
     apply_lithophane_with_light,
 
     #Chatgpt Service
-    get_chatgpt_response,
-    conversation_history,
-    time_remaining,
+    get_chatgpt_response
 )
 from PIL import Image
 import io
@@ -41,12 +39,6 @@ page_access_token = '' #SE GENERA AUTOMATICAMENTE DEPENDE DE USER_ACCESS_TOKEN
 
 # # Si necesitas valores específicos, accede directamente a las variables
 # app.secret_key = os.getenv("FLASK_SECRET_KEY")
-
-# Datos de prueba
-TEST_USER = {
-    "email": "ranpumetatest@ranpuoficial.com",
-    "password": "kJy2119$u"
-}
 
 # Función para obtener el Page Access Token desde me/accounts
 def obtener_page_access_token():
