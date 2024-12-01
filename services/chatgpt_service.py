@@ -89,11 +89,3 @@ def get_chatgpt_response(mensaje_usuario, user_id):
         # Manejo de errores generales
         print(f"Error desconocido: {e}")
         return "Ocurrió un error inesperado. Por favor, contacta a soporte técnico."
-
-
-# Ejemplo de uso para pruebas locales
-if __name__ == "__main__":
-    test_user_id = "123456789"
-    test_message = "Hola, ¿cuánto cuestan las lámparas?"
-    response = get_chatgpt_response(test_message, test_user_id)
-    print(response)
