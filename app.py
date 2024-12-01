@@ -1,46 +1,52 @@
 import requests
 from flask import Flask, request, render_template, redirect, url_for, session, flash, send_file
 import logging
+from config import config
 from services import (
+    #Lithophane Service
     apply_lithophane_no_light,
     apply_lithophane_with_light,
-    
+
     #Chatgpt Service
     get_chatgpt_response,
     conversation_history,
     time_remaining,
 )
-
 from PIL import Image
-import os
 import io
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "supersecretkey")  # Cambia por un valor seguro
+
+# Configuration in production mode
+app.config.from_object(config['production'])
+
+# Logging config
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+#Enviroment variables from config
+app_id = app.config['FACEBOOK_APP_ID']
+app_secret = app.config['FACEBOOK_APP_SECRET']
+user_access_token = app.config['USER_ACCESS_TOKEN']
+instagram_account_id = app.config['INSTAGRAM_ACCOUNT_ID']
+graph_api_version = app.config['GRAPH_API_VERSION']
+
+# URLs for Facebook Graph API
+messages_url = f'https://graph.facebook.com/{graph_api_version}/me/messages'
+accounts_url = f'https://graph.facebook.com/{graph_api_version}/me/accounts'
+
+# Variables globales para el token de acceso y el ID de Instagram
+page_access_token = '' #SE GENERA AUTOMATICAMENTE DEPENDE DE USER_ACCESS_TOKEN
+
+
+# # Si necesitas valores específicos, accede directamente a las variables
+# app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
 # Datos de prueba
 TEST_USER = {
     "email": "ranpumetatest@ranpuoficial.com",
     "password": "kJy2119$u"
 }
-
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Datos de tu aplicación
-app_id = os.getenv("FACEBOOK_APP_ID") #SE ENCUENTRAN EN EL SERVIDOR
-app_secret = os.getenv("FACEBOOK_APP_SECRET")
-user_access_token = os.getenv("USER_ACCESS_TOKEN")
-
-# Variables globales para el token de acceso y el ID de Instagram
-page_access_token = '' #SE GENERA AUTOMATICAMENTE DEPENDE DE USER_ACCESS_TOKEN
-instagram_account_id = os.getenv("INSTAGRAM_ACCOUNT_ID")
-
-
-graph_api_version = 'v21.0'
-messages_url = f'https://graph.facebook.com/{graph_api_version}/me/messages'
-accounts_url = f'https://graph.facebook.com/{graph_api_version}/me/accounts'
 
 # Función para obtener el Page Access Token desde me/accounts
 def obtener_page_access_token():
@@ -153,43 +159,6 @@ def webhook():
     else:
         logger.warning("Datos inválidos recibidos en el webhook.")
         return "Error: No se pudo procesar el webhook", 400
-
-
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        
-        # Validación de credenciales
-        if email == TEST_USER["email"] and password == TEST_USER["password"]:
-            session['user'] = email  # Almacenar el usuario en la sesión
-            flash("Inicio de sesión exitoso.", "success")
-            return redirect(url_for('console'))
-        else:
-            flash("Credenciales incorrectas.", "danger")
-            return redirect(url_for('login'))
-    
-    return render_template('login.html')  # Muestra un formulario de inicio de sesión
-
-@app.route('/logout')
-def logout():
-    session.pop('user', None)  # Eliminar el usuario de la sesión
-    flash("Sesión cerrada correctamente.", "success")
-    return redirect(url_for('login'))
-
-@app.route('/console')
-def console():
-    if 'user' not in session:  # Verifica si el usuario está autenticado
-        flash("Debes iniciar sesión para acceder a esta página.", "warning")
-        return redirect(url_for('login'))
-    
-    tiempo_para_borrado = time_remaining()  # Calcula el tiempo restante
-    return render_template(
-        'console.html',
-        historial_global=conversation_history,
-        tiempo_para_borrado=tiempo_para_borrado
-    )
 
 @app.route('/convert/no-light', methods=['POST'])
 def convert_image_no_light():
