@@ -14,31 +14,31 @@ load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
-def tiempo_restante():
-    global conversacion_historial, FECHA_INICIO  # Declara como global antes de usar
+def time_remaining():
+    global conversation_history, FECHA_INICIO  # Declara como global antes de usar
     ahora = datetime.now()
-    tiempo_restante = TIEMPO_MAXIMO_HISTORIAL - (ahora - FECHA_INICIO)
-    if tiempo_restante.total_seconds() > 0:
-        return str(tiempo_restante).split('.')[0]  # Retorna formato HH:MM:SS
+    time_remaining = TIEMPO_MAXIMO_HISTORIAL - (ahora - FECHA_INICIO)
+    if time_remaining.total_seconds() > 0:
+        return str(time_remaining).split('.')[0]  # Retorna formato HH:MM:SS
     else:
         # Limpia el historial si el tiempo ha expirado
-        conversacion_historial.clear()  # Limpia el historial
+        conversation_history.clear()  # Limpia el historial
         FECHA_INICIO = datetime.now()  # Reinicia el contador
         return "00:00:00"
 
 
 # Diccionario para almacenar el historial de conversaciones por usuario
-conversacion_historial = {}
+conversation_history = {}
 
 # Función para obtener la respuesta de ChatGPT
-def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
+def get_chatgpt_response(mensaje_usuario, user_id):
     # Ignorar cualquier mensaje proveniente del ID del bot
     if user_id == "17841451060597045":
         return ""
 
     # Inicializar el historial de mensajes para el usuario si no existe
-    if user_id not in conversacion_historial:
-        conversacion_historial[user_id] = [
+    if user_id not in conversation_history:
+        conversation_history[user_id] = [
             {"role": "system", "content": (
                 "Eres Ranpu, la inteligencia artificial de la empresa ecuatoriana de lámparas 3D personalizadas, Ranpu. "
                 "Responde siempre con un tono amable y agrega emojis para hacer las respuestas amigables. "
@@ -73,12 +73,12 @@ def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
         ]
 
     # Agregar el mensaje del usuario al historial
-    conversacion_historial[user_id].append({"role": "user", "content": mensaje_usuario})
+    conversation_history[user_id].append({"role": "user", "content": mensaje_usuario})
 
     # Generar la respuesta del asistente
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
-        messages=conversacion_historial[user_id],
+        messages=conversation_history[user_id],
         max_tokens=150,
         temperature=0.7
     )
@@ -87,7 +87,7 @@ def obtener_respuesta_chatgpt(mensaje_usuario, user_id):
     respuesta = response['choices'][0]['message']['content'].strip()
 
     # Agregar la respuesta del asistente al historial
-    conversacion_historial[user_id].append({"role": "assistant", "content": respuesta})
+    conversation_history[user_id].append({"role": "assistant", "content": respuesta})
 
     return respuesta
 

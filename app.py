@@ -1,8 +1,16 @@
 import requests
 from flask import Flask, request, render_template, redirect, url_for, session, flash, send_file
-from chatgpt import obtener_respuesta_chatgpt, conversacion_historial, tiempo_restante
 import logging
-from services import apply_lithophane_no_light, apply_lithophane_with_light
+from services import (
+    apply_lithophane_no_light,
+    apply_lithophane_with_light,
+    
+    #Chatgpt Service
+    get_chatgpt_response,
+    conversation_history,
+    time_remaining,
+)
+
 from PIL import Image
 import os
 import io
@@ -138,8 +146,8 @@ def webhook():
                     message_text = message.get('text')
                     if message_text:
                         logger.info(f"Nuevo mensaje de {sender_id}: {message_text}")
-                        # Llama a obtener_respuesta_chatgpt pasando sender_id para mantener la conversación
-                        respuesta_chatgpt = obtener_respuesta_chatgpt(message_text, sender_id)
+                        # Llama a get_chatgpt_response pasando sender_id para mantener la conversación
+                        respuesta_chatgpt = get_chatgpt_response(message_text, sender_id)
                         enviar_mensaje(sender_id, respuesta_chatgpt)
         return "OK", 200
     else:
@@ -176,10 +184,10 @@ def console():
         flash("Debes iniciar sesión para acceder a esta página.", "warning")
         return redirect(url_for('login'))
     
-    tiempo_para_borrado = tiempo_restante()  # Calcula el tiempo restante
+    tiempo_para_borrado = time_remaining()  # Calcula el tiempo restante
     return render_template(
         'console.html',
-        historial_global=conversacion_historial,
+        historial_global=conversation_history,
         tiempo_para_borrado=tiempo_para_borrado
     )
 
