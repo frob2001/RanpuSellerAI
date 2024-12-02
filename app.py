@@ -1,13 +1,7 @@
 from flask import Flask, request, render_template
-from config import config
 from routes import lithophane_bp, webhook_bp, inicializar_tokens, page_access_token
 
-
 app = Flask(__name__)
-
-# Configuration in production mode
-app.config.from_object(config['production'])
-
 
 
 # # Si necesitas valores específicos, accede directamente a las variables

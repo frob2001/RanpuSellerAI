@@ -1,11 +1,15 @@
 from flask import Blueprint, request, current_app
 import requests
+from config import config
 import logging
 from services import get_chatgpt_response  # Importar tu servicio para ChatGPT
 
 # Crear el Blueprint
 webhook_bp = Blueprint('webhook', __name__)
 logger = logging.getLogger(__name__)
+
+# Configuration in production mode
+webhook_bp.config.from_object(config['production'])
 
 # Función auxiliar para obtener el Page Access Token
 def obtener_page_access_token():
