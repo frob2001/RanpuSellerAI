@@ -1,7 +1,8 @@
 import requests
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template
 import logging
 from config import config
+from routes import lithophane_bp
 from services import (
     #Lithophane Service
     apply_lithophane_no_light,
@@ -10,8 +11,6 @@ from services import (
     #Chatgpt Service
     get_chatgpt_response
 )
-from PIL import Image
-import io
 
 app = Flask(__name__)
 
@@ -152,44 +151,8 @@ def webhook():
         logger.warning("Datos inválidos recibidos en el webhook.")
         return "Error: No se pudo procesar el webhook", 400
 
-@app.route('/convert/no-light', methods=['POST'])
-def convert_image_no_light():
-    if 'image' not in request.files:
-        return {"error": "No image file provided"}, 400
-
-    # Leer la imagen del archivo enviado
-    image_file = request.files['image']
-    image = Image.open(image_file)
-
-    # Aplicar filtro sin luz
-    no_light_image = apply_lithophane_no_light(image)
-
-    # Guardar la imagen en memoria
-    img_io = io.BytesIO()
-    no_light_image.save(img_io, 'PNG')
-    img_io.seek(0)
-
-    return send_file(img_io, mimetype='image/png')
-
-@app.route('/convert/with-light', methods=['POST'])
-def convert_image_with_light():
-    if 'image' not in request.files:
-        return {"error": "No image file provided"}, 400
-
-    # Leer la imagen del archivo enviado
-    image_file = request.files['image']
-    image = Image.open(image_file)
-
-    # Aplicar filtro con luz
-    with_light_image = apply_lithophane_with_light(image)
-
-    # Guardar la imagen en memoria
-    img_io = io.BytesIO()
-    with_light_image.save(img_io, 'PNG')
-    img_io.seek(0)
-
-    return send_file(img_io, mimetype='image/png')
-
+#Rutas para litofanias
+app.register_blueprint(lithophane_bp)
 
 # Página principal
 @app.route('/')
