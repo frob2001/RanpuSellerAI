@@ -1,26 +1,24 @@
 from flask import Flask, render_template
-from routes import lithophane_bp, webhook_bp, inicializar_tokens, page_access_token
+from routes.webhooks_routes import webhook_bp, inicializar_tokens, page_access_token
+from routes.lithophane_routes import lithophane_bp
+from config import config
 
 app = Flask(__name__)
 
+# Cargar configuración de entorno
+app.config.from_object(config['production'])
 
-# # Si necesitas valores específicos, accede directamente a las variables
-# app.secret_key = os.getenv("FLASK_SECRET_KEY")
-
-# Función para obtener el Page Access Token desde me/accounts
-
-#Rutas para litofanias
+# Registrar Blueprints
 app.register_blueprint(webhook_bp)
 app.register_blueprint(lithophane_bp)
 
-# Página principal
 @app.route('/')
 def home():
+    """Página principal."""
     return render_template('index.html')
 
-
 if __name__ == '__main__':
-    inicializar_tokens()  # Inicializar los tokens al iniciar la aplicación
+    inicializar_tokens()
     if page_access_token:
         app.run(port=5000)
     else:
