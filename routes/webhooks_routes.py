@@ -9,7 +9,7 @@ webhook_bp = Blueprint('webhook', __name__)
 logger = logging.getLogger(__name__)
 
 # Configuration in production mode
-webhook_bp.config.from_object(config['production'])
+user_access_token = current_app.config['USER_ACCESS_TOKEN']
 
 # Función auxiliar para obtener el Page Access Token
 def obtener_page_access_token():

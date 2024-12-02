@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template
+from flask import Flask, render_template
 from routes import lithophane_bp, webhook_bp, inicializar_tokens, page_access_token
 
 app = Flask(__name__)
