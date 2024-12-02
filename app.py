@@ -1,26 +1,33 @@
-from flask import Flask, render_template
-import logging
+from flask import Flask, request, render_template
 from config import config
-from routes import lithophane_bp, webhook_bp
-from services import get_chatgpt_response
+from routes import lithophane_bp, webhook_bp, inicializar_tokens, page_access_token
+
 
 app = Flask(__name__)
 
-# Configuración en modo producción
+# Configuration in production mode
 app.config.from_object(config['production'])
 
-# Configuración de logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-# Registro de Blueprints
-app.register_blueprint(lithophane_bp)
+
+# # Si necesitas valores específicos, accede directamente a las variables
+# app.secret_key = os.getenv("FLASK_SECRET_KEY")
+
+# Función para obtener el Page Access Token desde me/accounts
+
+#Rutas para litofanias
 app.register_blueprint(webhook_bp)
+app.register_blueprint(lithophane_bp)
 
 # Página principal
 @app.route('/')
 def home():
     return render_template('index.html')
 
+
 if __name__ == '__main__':
-    app.run(port=5000)
+    inicializar_tokens()  # Inicializar los tokens al iniciar la aplicación
+    if page_access_token:
+        app.run(port=5000)
+    else:
+        print("ERROR: No se pudo inicializar el Page Access Token. La aplicación no se iniciará.")
