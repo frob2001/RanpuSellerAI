@@ -151,15 +151,8 @@ app.register_blueprint(lithophane_bp)
 def home():
     return render_template('index.html')
 
-# Llamada inicial para obtener Page Access Token
-def inicializar_tokens():
-    if obtener_page_access_token():
-        logger.info("Inicialización de tokens completada.")
-    else:
-        logger.error("Fallo al obtener el Page Access Token durante la inicialización.")
-
 if __name__ == '__main__':
-    inicializar_tokens()  # Inicializar los tokens al iniciar la aplicación
+    renovar_page_access_token()  # Inicializar los tokens al iniciar la aplicación
     if page_access_token:
         app.run(port=5000)
     else:
