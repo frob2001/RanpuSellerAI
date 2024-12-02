@@ -1,11 +1,12 @@
 import requests
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import logging
 from config import config
 from routes import lithophane_bp
 from services import (
     #Chatgpt Service
-    get_chatgpt_response
+    get_chatgpt_response,
+    conversation_history
 )
 
 app = Flask(__name__)
@@ -142,6 +143,18 @@ def webhook():
     else:
         logger.warning("Datos inválidos recibidos en el webhook.")
         return "Error: No se pudo procesar el webhook", 400
+    
+
+@app.route('/conversations/<user_id>', methods=['GET'])
+def get_conversations(user_id):
+    """
+    Endpoint para obtener las conversaciones del usuario.
+    """
+    if user_id in conversation_history:
+        return jsonify({"user_id": user_id, "conversation": conversation_history[user_id]}), 200
+    else:
+        return jsonify({"error": "No se encontraron conversaciones para este usuario."}), 404
+
 
 #Rutas para litofanias
 app.register_blueprint(lithophane_bp)
