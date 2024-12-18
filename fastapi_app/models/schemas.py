@@ -6,7 +6,7 @@ class EstadoImpresoraSchema(BaseModel):
     nombre: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Esquema para la creación y actualización
 class EstadoImpresoraCreateUpdateSchema(BaseModel):

@@ -8,5 +8,5 @@ Base.metadata.create_all(bind=engine)
 # Crear la aplicación FastAPI
 app = FastAPI(title="API de Estados de Impresoras", version="1.0.0")
 
-# Registrar rutas
-app.include_router(estado_impresora_router)
+# Registrar rutas con prefijo
+app.include_router(estado_impresora_router, prefix="/fastapi")
