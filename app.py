@@ -167,7 +167,7 @@ def home():
     return render_template('index.html')
 
 # Integrar FastAPI con WSGIMiddleware
-app.wsgi_app = WSGIMiddleware(fastapi_app)
+app.wsgi_app = WSGIMiddleware(fastapi_app, script_name="/fastapi")
 
 if __name__ == '__main__':
     renovar_page_access_token()  # Inicializar los tokens al iniciar la aplicación
