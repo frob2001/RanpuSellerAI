@@ -1,5 +1,5 @@
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from .models import EstadosImpresoras
+from ..models.estados_impresoras import EstadosImpresoras
 
 class EstadosImpresorasSchema(SQLAlchemyAutoSchema):
     class Meta:

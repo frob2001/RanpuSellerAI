@@ -1,4 +1,4 @@
-from .database import db
+from ..database import db
 
 class EstadosImpresoras(db.Model):
     __tablename__ = "estados_impresoras"

@@ -1,15 +1,15 @@
 from flask import Blueprint, jsonify, request
-from .models import EstadosImpresoras
-from .schemas import EstadosImpresorasSchema
-from .database import db
+from ..models.estados_impresoras import EstadosImpresoras
+from ..schemas.estados_impresoras_schemas import EstadosImpresorasSchema
+from ..database import db
 
 api_bp = Blueprint("api", __name__)
 
 estado_schema = EstadosImpresorasSchema()
 estados_schema = EstadosImpresorasSchema(many=True)
 
-@api_bp.route("/estados", methods=["GET"])
-def get_estados():
+@api_bp.route("/estados_impresoras", methods=["GET"])
+def get_estados_impresoras():
     """
     Obtener todos los estados
     ---
@@ -34,8 +34,8 @@ def get_estados():
     serialized_data = estados_schema.dump(estados)
     return jsonify(serialized_data)
 
-@api_bp.route("/estados/<int:id>", methods=["GET"])
-def get_estado(id):
+@api_bp.route("/estados_impresoras/<int:id>", methods=["GET"])
+def get_estado_impresora(id):
     """
     Obtener un estado específico
     ---
@@ -66,8 +66,8 @@ def get_estado(id):
     serialized_data = estado_schema.dump(estado)
     return jsonify(serialized_data)
 
-@api_bp.route("/estados", methods=["POST"])
-def create_estado():
+@api_bp.route("/estados_impresoras", methods=["POST"])
+def create_estado_impresora():
     """
     Crear un nuevo estado
     ---
@@ -102,8 +102,8 @@ def create_estado():
     serialized_data = estado_schema.dump(new_estado)
     return jsonify(serialized_data), 201
 
-@api_bp.route("/estados/<int:id>", methods=["PUT"])
-def update_estado(id):
+@api_bp.route("/estados_impresoras/<int:id>", methods=["PUT"])
+def update_estado_impresora(id):
     """
     Actualizar un estado existente
     ---
@@ -145,8 +145,8 @@ def update_estado(id):
     serialized_data = estado_schema.dump(estado)
     return jsonify(serialized_data)
 
-@api_bp.route("/estados/<int:id>", methods=["DELETE"])
-def delete_estado(id):
+@api_bp.route("/estados_impresoras/<int:id>", methods=["DELETE"])
+def delete_estado_impresora(id):
     """
     Eliminar un estado
     ---

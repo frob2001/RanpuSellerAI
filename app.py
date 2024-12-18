@@ -11,8 +11,10 @@ from services import (
 
 #API 
 from api.database import init_db
-from api.routes import api_bp
 from api.swagger import init_swagger
+
+#API ROUTES
+from api.routes import estados_impresoras_bp
 
 app = Flask(__name__)
 
@@ -167,8 +169,8 @@ def get_conversations(user_id):
 #Rutas para litofanias
 app.register_blueprint(lithophane_bp)
 
-#Blueprints for API
-app.register_blueprint(api_bp, url_prefix="/api")
+#Blueprints for APIs
+app.register_blueprint(estados_impresoras_bp, url_prefix="/api")
 
 # Página principal
 @app.route('/')
