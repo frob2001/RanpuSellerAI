@@ -9,7 +9,15 @@ from services import (
     conversation_history
 )
 
+#API 
+from api.database import init_db
+from api.routes import api_bp
+from api.swagger import init_swagger
+
 app = Flask(__name__)
+
+init_db(app)
+init_swagger(app)
 
 # Configuration in production mode
 app.config.from_object(config['production'])
@@ -158,6 +166,9 @@ def get_conversations(user_id):
 
 #Rutas para litofanias
 app.register_blueprint(lithophane_bp)
+
+#Blueprints for API
+app.register_blueprint(api_bp, url_prefix="/api")
 
 # Página principal
 @app.route('/')
