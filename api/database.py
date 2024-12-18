@@ -5,7 +5,7 @@ db = SQLAlchemy()
 def init_db(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         "postgresql://ranpubackenddatabase_user:"
-        "pKqQ12aSzKeFiqvsR5pUEUFipbWWcgox"
+        "pKqQl2aSzKeFiqvsR5pUEUFipbWWcgox"
         "@dpg-ctgraj0gph6c73ck0ppg-a.oregon-postgres.render.com:5432/ranpubackenddatabase"
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
