@@ -1,6 +1,6 @@
 from .database import db
 
-class EstadoImpresora(db.Model):
+class EstadosImpresoras(db.Model):
     __tablename__ = "estados_impresoras"
 
     estado_impresora_id = db.Column(db.Integer, primary_key=True)

@@ -1,7 +1,7 @@
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
-from .models import EstadoImpresora
+from .models import EstadosImpresoras
 
-class EstadoImpresoraSchema(SQLAlchemyAutoSchema):
+class EstadosImpresorasSchema(SQLAlchemyAutoSchema):
     class Meta:
-        model = EstadoImpresora
+        model = EstadosImpresoras
         load_instance = True
