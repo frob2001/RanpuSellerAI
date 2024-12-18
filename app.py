@@ -8,6 +8,8 @@ from services import (
     get_chatgpt_response,
     conversation_history
 )
+from fastapi_app.main import app as fastapi_app
+from fastapi.middleware.wsgi import WSGIMiddleware
 
 app = Flask(__name__)
 
@@ -163,6 +165,9 @@ app.register_blueprint(lithophane_bp)
 @app.route('/')
 def home():
     return render_template('index.html')
+
+# Integrar FastAPI con WSGIMiddleware
+app.wsgi_app = WSGIMiddleware(fastapi_app)
 
 if __name__ == '__main__':
     renovar_page_access_token()  # Inicializar los tokens al iniciar la aplicación
