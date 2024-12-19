@@ -376,3 +376,231 @@ def create_pedido():
         db.session.rollback()
         return jsonify({"message": "Error al crear el pedido", "error": str(e)}), 500
 
+@pedidos_bp.route('/<int:pedido_id>', methods=['PUT'])
+@swag_from({
+    'tags': ['Pedidos'],
+    'summary': 'Actualizar un pedido existente',
+    'description': 'Actualiza un pedido, incluyendo la dirección asociada, los productos relacionados, el estado, el impuesto y el usuario asociado.',
+    'parameters': [
+        {
+            'name': 'pedido_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del pedido a actualizar'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
+                    'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
+                    'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
+                    'estado_pedido_id': {'type': 'integer', 'example': 1},
+                    'impuesto_id': {'type': 'integer', 'example': 1},
+                    'precio': {'type': 'string', 'example': '100.00'},
+                    'precio_final': {'type': 'string', 'example': '112.00'},
+                    'pago_id': {'type': 'string', 'example': 'PAY123'},
+                    'direccion': {
+                        'type': 'object',
+                        'properties': {
+                            'cedula': {'type': 'string', 'example': '1234567890'},
+                            'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                            'telefono': {'type': 'string', 'example': '+593999999999'},
+                            'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                            'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
+                            'ciudad': {'type': 'string', 'example': 'Springfield'},
+                            'provincia': {'type': 'string', 'example': 'Pichincha'},
+                            'numeracion': {'type': 'string', 'example': '123'},
+                            'referencia': {'type': 'string', 'example': 'Frente al parque'},
+                            'codigo_postal': {'type': 'string', 'example': '170123'}
+                        }
+                    },
+                    'productos': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'cantidad': {'type': 'integer', 'example': 2}
+                            }
+                        }
+                    },
+                    'usuario_id': {'type': 'integer', 'example': 1}
+                },
+                'required': [
+                    'fecha_envio', 'fecha_entrega', 'fecha_pago',
+                    'estado_pedido_id', 'impuesto_id', 'precio', 'precio_final', 'pago_id',
+                    'direccion', 'productos', 'usuario_id'
+                ]
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Pedido actualizado exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'pedido_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Pedido actualizado exitosamente'}
+                }
+            }
+        },
+        400: {'description': 'Datos inválidos en la solicitud'},
+        404: {'description': 'Pedido no encontrado'},
+        500: {'description': 'Error interno del servidor'}
+    }
+})
+def update_pedido(pedido_id):
+    """Actualizar un pedido existente, incluyendo dirección, productos y usuario asociado."""
+    data = request.get_json()
+
+    # Validar existencia del pedido
+    pedido = Pedidos.query.get(pedido_id)
+    if not pedido:
+        return jsonify({"message": "Pedido no encontrado"}), 404
+
+    try:
+        # Actualizar dirección
+        direccion_data = data['direccion']
+        direccion = Direcciones.query.get(pedido.direccion_id)
+        if direccion:
+            direccion.cedula = direccion_data['cedula']
+            direccion.nombre_completo = direccion_data['nombre_completo']
+            direccion.telefono = direccion_data['telefono']
+            direccion.calle_principal = direccion_data['calle_principal']
+            direccion.calle_secundaria = direccion_data.get('calle_secundaria')
+            direccion.ciudad = direccion_data['ciudad']
+            direccion.provincia = direccion_data['provincia']
+            direccion.numeracion = direccion_data.get('numeracion')
+            direccion.referencia = direccion_data.get('referencia')
+            direccion.codigo_postal = direccion_data.get('codigo_postal')
+
+        # Actualizar datos del pedido
+        pedido.fecha_envio = data['fecha_envio']
+        pedido.fecha_entrega = data['fecha_entrega']
+        pedido.fecha_pago = data['fecha_pago']
+        pedido.estado_pedido_id = data['estado_pedido_id']
+        pedido.impuesto_id = data['impuesto_id']
+        pedido.precio = data['precio']
+        pedido.precio_final = data['precio_final']
+        pedido.pago_id = data['pago_id']
+
+        # Actualizar usuario del pedido
+        usuario_id = data['usuario_id']
+        pedido_usuario = PedidosUsuario.query.filter_by(pedido_id=pedido_id).first()
+        if pedido_usuario:
+            pedido_usuario.usuario_id = usuario_id
+        else:
+            nuevo_pedido_usuario = PedidosUsuario(pedido_id=pedido_id, usuario_id=usuario_id)
+            db.session.add(nuevo_pedido_usuario)
+
+        # Actualizar productos del pedido
+        nuevos_productos = data['productos']
+        productos_existentes = ProductosPedidos.query.filter_by(pedido_id=pedido_id).all()
+
+        # Eliminar productos que ya no están en la solicitud
+        productos_a_eliminar = [
+            producto for producto in productos_existentes
+            if producto.producto_id not in [p['producto_id'] for p in nuevos_productos]
+        ]
+        for producto in productos_a_eliminar:
+            db.session.delete(producto)
+
+        # Agregar o actualizar productos existentes
+        for nuevo_producto in nuevos_productos:
+            producto_existente = next(
+                (p for p in productos_existentes if p.producto_id == nuevo_producto['producto_id']), None
+            )
+            if producto_existente:
+                producto_existente.cantidad = nuevo_producto['cantidad']
+            else:
+                nuevo_producto_pedido = ProductosPedidos(
+                    pedido_id=pedido_id,
+                    producto_id=nuevo_producto['producto_id'],
+                    cantidad=nuevo_producto['cantidad']
+                )
+                db.session.add(nuevo_producto_pedido)
+
+        db.session.commit()
+
+        # Respuesta exitosa
+        return jsonify({
+            "pedido_id": pedido_id,
+            "message": "Pedido actualizado exitosamente"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al actualizar el pedido", "error": str(e)}), 500
+
+@pedidos_bp.route('/<int:pedido_id>', methods=['DELETE'])
+@swag_from({
+    'tags': ['Pedidos'],
+    'summary': 'Eliminar un pedido existente',
+    'description': 'Elimina un pedido específico, incluyendo los productos relacionados, la dirección asociada y la relación con el usuario.',
+    'parameters': [
+        {
+            'name': 'pedido_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del pedido a eliminar'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Pedido eliminado exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'pedido_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Pedido eliminado exitosamente'}
+                }
+            }
+        },
+        404: {'description': 'Pedido no encontrado'},
+        500: {'description': 'Error interno del servidor'}
+    }
+})
+def delete_pedido(pedido_id):
+    """Eliminar un pedido existente, incluyendo dirección, productos y relación con usuario."""
+    # Validar existencia del pedido
+    pedido = Pedidos.query.get(pedido_id)
+    if not pedido:
+        return jsonify({"message": "Pedido no encontrado"}), 404
+
+    try:
+        # Eliminar productos relacionados con el pedido
+        productos_pedidos = ProductosPedidos.query.filter_by(pedido_id=pedido_id).all()
+        for producto in productos_pedidos:
+            db.session.delete(producto)
+
+        # Eliminar la relación usuario-pedido
+        pedido_usuario = PedidosUsuario.query.filter_by(pedido_id=pedido_id).first()
+        if pedido_usuario:
+            db.session.delete(pedido_usuario)
+
+        # Eliminar la dirección asociada
+        direccion = Direcciones.query.get(pedido.direccion_id)
+        if direccion:
+            db.session.delete(direccion)
+
+        # Eliminar el pedido
+        db.session.delete(pedido)
+
+        db.session.commit()
+
+        # Respuesta exitosa
+        return jsonify({
+            "pedido_id": pedido_id,
+            "message": "Pedido eliminado exitosamente"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al eliminar el pedido", "error": str(e)}), 500
