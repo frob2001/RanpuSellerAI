@@ -225,8 +225,8 @@ def get_pedido_por_id(pedido_id):
 @pedidos_bp.route('/', methods=['POST'])
 @swag_from({
     'tags': ['Pedidos'],
-    'summary': 'Crear un nuevo pedido con dirección',
-    'description': 'Crea un nuevo pedido, incluyendo la dirección asociada, productos relacionados, estado e impuesto.',
+    'summary': 'Crear un nuevo pedido con dirección y usuario',
+    'description': 'Crea un nuevo pedido, incluyendo la dirección asociada, usuario, productos relacionados, estado e impuesto.',
     'parameters': [
         {
             'name': 'body',
@@ -243,6 +243,7 @@ def get_pedido_por_id(pedido_id):
                     'precio': {'type': 'string', 'example': '100.00'},
                     'precio_final': {'type': 'string', 'example': '112.00'},
                     'pago_id': {'type': 'string', 'example': 'PAY123'},
+                    'usuario_id': {'type': 'integer', 'example': 1},
                     'direccion': {
                         'type': 'object',
                         'properties': {
@@ -275,9 +276,8 @@ def get_pedido_por_id(pedido_id):
                 },
                 'required': [
                     'fecha_envio', 'fecha_entrega', 'fecha_pago',
-                    'estado_pedido_id', 'impuesto_id',
-                    'precio', 'precio_final', 'pago_id',
-                    'direccion', 'productos'
+                    'estado_pedido_id', 'impuesto_id', 'precio', 'precio_final',
+                    'pago_id', 'usuario_id', 'direccion', 'productos'
                 ]
             }
         }
@@ -290,7 +290,8 @@ def get_pedido_por_id(pedido_id):
                 'properties': {
                     'pedido_id': {'type': 'integer', 'example': 1},
                     'direccion_id': {'type': 'integer', 'example': 1},
-                    'message': {'type': 'string', 'example': 'Pedido y dirección creados exitosamente'}
+                    'usuario_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Pedido, dirección y usuario asociados exitosamente'}
                 }
             }
         },
@@ -299,13 +300,14 @@ def get_pedido_por_id(pedido_id):
     }
 })
 def create_pedido():
-    """Crear un nuevo pedido con dirección asociada, incluyendo productos relacionados."""
+    """Crear un nuevo pedido con dirección, usuario y productos relacionados."""
     data = request.get_json()
 
     # Validar campos obligatorios
     required_fields = [
         'fecha_envio', 'fecha_entrega', 'fecha_pago',
-        'estado_pedido_id', 'impuesto_id', 'precio', 'precio_final', 'pago_id', 'direccion', 'productos'
+        'estado_pedido_id', 'impuesto_id', 'precio', 'precio_final',
+        'pago_id', 'usuario_id', 'direccion', 'productos'
     ]
     for field in required_fields:
         if field not in data:
@@ -344,6 +346,13 @@ def create_pedido():
         db.session.add(nuevo_pedido)
         db.session.flush()  # Obtener el pedido_id antes del commit
 
+        # Asociar el pedido al usuario
+        usuario_pedido = PedidosUsuario(
+            pedido_id=nuevo_pedido.pedido_id,
+            usuario_id=data['usuario_id']
+        )
+        db.session.add(usuario_pedido)
+
         # Agregar productos al pedido
         for producto in data['productos']:
             producto_pedido = ProductosPedidos(
@@ -359,9 +368,11 @@ def create_pedido():
         return jsonify({
             "pedido_id": nuevo_pedido.pedido_id,
             "direccion_id": nueva_direccion.direccion_id,
-            "message": "Pedido y dirección creados exitosamente"
+            "usuario_id": data['usuario_id'],
+            "message": "Pedido, dirección y usuario asociados exitosamente"
         }), 201
 
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error al crear el pedido", "error": str(e)}), 500
+
