@@ -29,9 +29,19 @@ multiple_pedidos_schema = PedidosSchema(many=True)
                         'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
                         'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
                         'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
-                        'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
-                        'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
-                        'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
+                        'estado_pedido': {'type': 'object', 'example': {'nombre': 'Enviado'}},
+                        'direccion': {
+                            'type': 'object',
+                            'properties': {
+                                'direccion_id': {'type': 'integer', 'example': 1},
+                                'cedula': {'type': 'string', 'example': '0123456789'},
+                                'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                                'telefono': {'type': 'string', 'example': '0987654321'},
+                                'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                                'ciudad': {'type': 'string', 'example': 'Springfield'}
+                            }
+                        },
+                        'impuesto': {'type': 'object', 'example': {'nombre': 'IVA', 'porcentaje': '12.00'}},
                         'productos': {
                             'type': 'array',
                             'items': {
@@ -59,7 +69,7 @@ def get_todos_pedidos():
                 "producto_id": item.producto.producto_id,
                 "nombre": item.producto.nombre,
                 "cantidad": item.cantidad
-            } for item in pedido.productos_pedidos_list
+            } for item in pedido.productos_pedidos
         ]
 
         pedido_dict = pedido.to_dict()
@@ -96,9 +106,19 @@ def get_todos_pedidos():
                     'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
                     'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
                     'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
-                    'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
-                    'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
-                    'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
+                    'estado_pedido': {'type': 'object', 'example': {'nombre': 'Enviado'}},
+                    'direccion': {
+                        'type': 'object',
+                        'properties': {
+                            'direccion_id': {'type': 'integer', 'example': 1},
+                            'cedula': {'type': 'string', 'example': '0123456789'},
+                            'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                            'telefono': {'type': 'string', 'example': '0987654321'},
+                            'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                            'ciudad': {'type': 'string', 'example': 'Springfield'}
+                        }
+                    },
+                    'impuesto': {'type': 'object', 'example': {'nombre': 'IVA', 'porcentaje': '12.00'}},
                     'productos': {
                         'type': 'array',
                         'items': {
@@ -127,7 +147,7 @@ def get_pedido_por_id(pedido_id):
             "producto_id": item.producto.producto_id,
             "nombre": item.producto.nombre,
             "cantidad": item.cantidad
-        } for item in pedido.productos_pedidos_list
+        } for item in pedido.productos_pedidos
     ]
 
     response = pedido.to_dict()
