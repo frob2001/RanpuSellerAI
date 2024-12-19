@@ -7,7 +7,7 @@ class ProductosPedidos(db.Model):
     producto_id = db.Column(db.Integer, db.ForeignKey('productos.producto_id'), primary_key=True)
     cantidad = db.Column(db.Integer, nullable=False)
 
-    pedido = db.relationship('Pedidos', backref=db.backref('productos_pedidos_list', lazy=True))  # Renombramos el backref
+    pedido = db.relationship('Pedidos', backref=db.backref('productos_pedidos_list', lazy=True))
     producto = db.relationship('Productos', backref=db.backref('productos_pedidos_list', lazy=True))
 
     def to_dict(self):

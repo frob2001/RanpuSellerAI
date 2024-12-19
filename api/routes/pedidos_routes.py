@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from ..models.pedidos import Pedidos
 from ..models.pedidos_usuario import PedidosUsuario
+from ..models.productos_pedidos import ProductosPedidos
 from ..schemas.pedidos_schema import PedidosSchema
 from ..database import db
 
@@ -16,7 +17,7 @@ multiple_pedidos_schema = PedidosSchema(many=True)
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener todos los pedidos',
-    'description': 'Obtiene una lista de todos los pedidos, incluyendo sus detalles de estado, dirección, impuesto y productos relacionados.',
+    'description': 'Obtiene una lista de todos los pedidos, incluyendo detalles de estado, dirección, impuesto y productos relacionados.',
     'responses': {
         200: {
             'description': 'Lista de pedidos',
@@ -29,19 +30,9 @@ multiple_pedidos_schema = PedidosSchema(many=True)
                         'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
                         'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
                         'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
-                        'estado_pedido': {'type': 'object', 'example': {'nombre': 'Enviado'}},
-                        'direccion': {
-                            'type': 'object',
-                            'properties': {
-                                'direccion_id': {'type': 'integer', 'example': 1},
-                                'cedula': {'type': 'string', 'example': '0123456789'},
-                                'nombre_completo': {'type': 'string', 'example': 'John Doe'},
-                                'telefono': {'type': 'string', 'example': '0987654321'},
-                                'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
-                                'ciudad': {'type': 'string', 'example': 'Springfield'}
-                            }
-                        },
-                        'impuesto': {'type': 'object', 'example': {'nombre': 'IVA', 'porcentaje': '12.00'}},
+                        'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
+                        'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
+                        'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
                         'productos': {
                             'type': 'array',
                             'items': {
@@ -64,29 +55,32 @@ def get_todos_pedidos():
     pedidos = Pedidos.query.all()
     response = []
     for pedido in pedidos:
-        productos_pedidos = [
+        # Obtener productos relacionados
+        productos_pedidos = ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
+        productos = [
             {
-                "producto_id": item.producto.producto_id,
-                "nombre": item.producto.nombre,
-                "cantidad": item.cantidad
-            } for item in (pedido.productos_pedidos or [])  # Aseguramos que sea iterable, devolviendo una lista vacía si es None
+                "producto_id": pp.producto.producto_id,
+                "nombre": pp.producto.nombre,
+                "cantidad": pp.cantidad
+            }
+            for pp in productos_pedidos
         ]
 
+        # Construir la respuesta del pedido
         pedido_dict = pedido.to_dict()
         pedido_dict["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
         pedido_dict["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
         pedido_dict["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-        pedido_dict["productos"] = productos_pedidos  # Incluimos la lista vacía si no hay productos
+        pedido_dict["productos"] = productos
         response.append(pedido_dict)
 
     return jsonify(response), 200
-
 
 @pedidos_bp.route('/<int:pedido_id>', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener un pedido por ID',
-    'description': 'Obtiene un pedido específico por su ID, incluyendo los detalles de estado, dirección, impuesto y productos relacionados.',
+    'description': 'Obtiene un pedido específico por su ID, incluyendo detalles de estado, dirección, impuesto y productos relacionados.',
     'parameters': [
         {
             'name': 'pedido_id',
@@ -106,19 +100,9 @@ def get_todos_pedidos():
                     'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
                     'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
                     'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
-                    'estado_pedido': {'type': 'object', 'example': {'nombre': 'Enviado'}},
-                    'direccion': {
-                        'type': 'object',
-                        'properties': {
-                            'direccion_id': {'type': 'integer', 'example': 1},
-                            'cedula': {'type': 'string', 'example': '0123456789'},
-                            'nombre_completo': {'type': 'string', 'example': 'John Doe'},
-                            'telefono': {'type': 'string', 'example': '0987654321'},
-                            'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
-                            'ciudad': {'type': 'string', 'example': 'Springfield'}
-                        }
-                    },
-                    'impuesto': {'type': 'object', 'example': {'nombre': 'IVA', 'porcentaje': '12.00'}},
+                    'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
+                    'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
+                    'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
                     'productos': {
                         'type': 'array',
                         'items': {
@@ -142,18 +126,22 @@ def get_pedido_por_id(pedido_id):
     if not pedido:
         return jsonify({"message": "Pedido no encontrado"}), 404
 
-    productos_pedidos = [
+    # Obtener productos relacionados
+    productos_pedidos = ProductosPedidos.query.filter_by(pedido_id=pedido_id).all()
+    productos = [
         {
-            "producto_id": item.producto.producto_id,
-            "nombre": item.producto.nombre,
-            "cantidad": item.cantidad
-        } for item in (pedido.productos_pedidos or [])  # Aseguramos que sea iterable
+            "producto_id": pp.producto.producto_id,
+            "nombre": pp.producto.nombre,
+            "cantidad": pp.cantidad
+        }
+        for pp in productos_pedidos
     ]
 
+    # Construir la respuesta del pedido
     response = pedido.to_dict()
     response["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
     response["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
     response["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-    response["productos"] = productos_pedidos  # Incluimos la lista vacía si no hay productos
+    response["productos"] = productos
 
     return jsonify(response), 200
