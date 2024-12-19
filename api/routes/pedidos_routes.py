@@ -15,8 +15,8 @@ multiple_pedidos_schema = PedidosSchema(many=True)
 @pedidos_bp.route('/', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],
-    'summary': 'Listar pedidos',
-    'description': 'Obtiene todos los pedidos registrados en la base de datos, incluyendo detalles de impuestos, direcciones, estados de pedido y el usuario asociado.',
+    'summary': 'Obtener todos los pedidos',
+    'description': 'Obtiene una lista de todos los pedidos, incluyendo sus detalles de estado, dirección, impuesto y productos relacionados.',
     'responses': {
         200: {
             'description': 'Lista de pedidos',
@@ -26,227 +26,114 @@ multiple_pedidos_schema = PedidosSchema(many=True)
                     'type': 'object',
                     'properties': {
                         'pedido_id': {'type': 'integer', 'example': 1},
-                        'fecha_envio': {'type': 'string', 'format': 'date-time', 'example': '2023-01-01T10:00:00'},
-                        'fecha_entrega': {'type': 'string', 'format': 'date-time', 'example': '2023-01-05T10:00:00'},
-                        'fecha_pago': {'type': 'string', 'format': 'date-time', 'example': '2023-01-02T10:00:00'},
-                        'estado_pedido_id': {'type': 'integer', 'example': 1},
-                        'direccion_id': {'type': 'integer', 'example': 1},
-                        'precio': {'type': 'string', 'example': '100.00'},
-                        'impuesto_id': {'type': 'integer', 'example': 1},
-                        'precio_final': {'type': 'string', 'example': '112.00'},
-                        'pago_id': {'type': 'string', 'example': 'PAY123'},
-                        'usuario_id': {'type': 'integer', 'example': 1}
+                        'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
+                        'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
+                        'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
+                        'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
+                        'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
+                        'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
+                        'productos': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'producto_id': {'type': 'integer', 'example': 1},
+                                    'nombre': {'type': 'string', 'example': 'Lámpara Redonda'},
+                                    'cantidad': {'type': 'integer', 'example': 2}
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 })
-def get_pedidos():
-    """Obtener todos los pedidos"""
+def get_todos_pedidos():
+    """Obtener todos los pedidos, incluyendo detalles y productos relacionados."""
     pedidos = Pedidos.query.all()
-    resultado = []
+    response = []
     for pedido in pedidos:
-        data = pedido.to_dict()
-        usuario = PedidosUsuario.query.filter_by(pedido_id=pedido.pedido_id).first()
-        if usuario:
-            data["usuario_id"] = usuario.usuario_id
-        resultado.append(data)
-    return jsonify(resultado), 200
+        productos_pedidos = [
+            {
+                "producto_id": item.producto.producto_id,
+                "nombre": item.producto.nombre,
+                "cantidad": item.cantidad
+            } for item in pedido.productos_pedidos_list
+        ]
 
-@pedidos_bp.route('/usuario/<int:usuario_id>', methods=['GET'])
+        pedido_dict = pedido.to_dict()
+        pedido_dict["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
+        pedido_dict["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
+        pedido_dict["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
+        pedido_dict["productos"] = productos_pedidos
+        response.append(pedido_dict)
+
+    return jsonify(response), 200
+
+
+@pedidos_bp.route('/<int:pedido_id>', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],
-    'summary': 'Listar pedidos por usuario',
-    'description': 'Obtiene todos los pedidos asociados a un usuario específico.',
+    'summary': 'Obtener un pedido por ID',
+    'description': 'Obtiene un pedido específico por su ID, incluyendo los detalles de estado, dirección, impuesto y productos relacionados.',
     'parameters': [
         {
-            'name': 'usuario_id',
+            'name': 'pedido_id',
             'in': 'path',
             'required': True,
             'type': 'integer',
-            'description': 'ID del usuario'
+            'description': 'ID del pedido a obtener'
         }
     ],
     'responses': {
         200: {
-            'description': 'Lista de pedidos del usuario',
+            'description': 'Pedido encontrado',
             'schema': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'pedido_id': {'type': 'integer', 'example': 1},
-                        'fecha_envio': {'type': 'string', 'format': 'date-time', 'example': '2023-01-01T10:00:00'},
-                        'fecha_entrega': {'type': 'string', 'format': 'date-time', 'example': '2023-01-05T10:00:00'},
-                        'fecha_pago': {'type': 'string', 'format': 'date-time', 'example': '2023-01-02T10:00:00'},
-                        'estado_pedido_id': {'type': 'integer', 'example': 1},
-                        'direccion_id': {'type': 'integer', 'example': 1},
-                        'precio': {'type': 'string', 'example': '100.00'},
-                        'impuesto_id': {'type': 'integer', 'example': 1},
-                        'precio_final': {'type': 'string', 'example': '112.00'},
-                        'pago_id': {'type': 'string', 'example': 'PAY123'}
+                'type': 'object',
+                'properties': {
+                    'pedido_id': {'type': 'integer', 'example': 1},
+                    'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
+                    'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
+                    'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
+                    'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
+                    'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
+                    'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
+                    'productos': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'Lámpara Redonda'},
+                                'cantidad': {'type': 'integer', 'example': 2}
+                            }
+                        }
                     }
                 }
             }
         },
-        404: {'description': 'Usuario no tiene pedidos'}
+        404: {'description': 'Pedido no encontrado'}
     }
 })
-def get_pedidos_por_usuario(usuario_id):
-    """Obtener pedidos por usuario"""
-    pedidos_usuario = PedidosUsuario.query.filter_by(usuario_id=usuario_id).all()
-    if not pedidos_usuario:
-        return jsonify({"message": "No hay pedidos para este usuario"}), 404
+def get_pedido_por_id(pedido_id):
+    """Obtener un pedido por su ID, incluyendo detalles y productos relacionados."""
+    pedido = Pedidos.query.get(pedido_id)
+    if not pedido:
+        return jsonify({"message": "Pedido no encontrado"}), 404
 
-    resultado = []
-    for relacion in pedidos_usuario:
-        pedido = Pedidos.query.get(relacion.pedido_id)
-        if pedido:
-            resultado.append(pedido.to_dict())
-    return jsonify(resultado), 200
-
-@pedidos_bp.route('/', methods=['POST'])
-@swag_from({
-    'tags': ['Pedidos'],
-    'summary': 'Crear pedido',
-    'description': 'Crea un nuevo pedido en la base de datos, incluyendo el usuario asociado.',
-    'parameters': [
+    productos_pedidos = [
         {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'fecha_envio': {'type': 'string', 'format': 'date-time', 'example': '2023-01-01T10:00:00'},
-                    'fecha_entrega': {'type': 'string', 'format': 'date-time', 'example': '2023-01-05T10:00:00'},
-                    'fecha_pago': {'type': 'string', 'format': 'date-time', 'example': '2023-01-02T10:00:00'},
-                    'estado_pedido_id': {'type': 'integer', 'example': 1},
-                    'direccion_id': {'type': 'integer', 'example': 1},
-                    'precio': {'type': 'string', 'example': '100.00'},
-                    'impuesto_id': {'type': 'integer', 'example': 1},
-                    'precio_final': {'type': 'string', 'example': '112.00'},
-                    'pago_id': {'type': 'string', 'example': 'PAY123'},
-                    'usuario_id': {'type': 'integer', 'example': 1}
-                }
-            }
-        }
-    ],
-    'responses': {
-        201: {'description': 'Pedido creado exitosamente'}
-    }
-})
-def create_pedido():
-    """Crear un nuevo pedido"""
-    data = request.get_json()
-    usuario_id = data.pop('usuario_id', None)
-    if not usuario_id:
-        return jsonify({"error": "Falta el usuario_id"}), 400
-    try:
-        pedido = pedido_schema.load(data, session=db.session)
-        db.session.add(pedido)
-        db.session.commit()
+            "producto_id": item.producto.producto_id,
+            "nombre": item.producto.nombre,
+            "cantidad": item.cantidad
+        } for item in pedido.productos_pedidos_list
+    ]
 
-        pedido_usuario = PedidosUsuario(pedido_id=pedido.pedido_id, usuario_id=usuario_id)
-        db.session.add(pedido_usuario)
-        db.session.commit()
+    response = pedido.to_dict()
+    response["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
+    response["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
+    response["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
+    response["productos"] = productos_pedidos
 
-        return jsonify(pedido_schema.dump(pedido)), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
-
-@pedidos_bp.route('/<int:pedido_id>', methods=['PUT'])
-@swag_from({
-    'tags': ['Pedidos'],
-    'summary': 'Actualizar pedido',
-    'description': 'Actualiza los datos de un pedido existente, incluyendo el usuario asociado.',
-    'parameters': [
-        {
-            'name': 'pedido_id',
-            'in': 'path',
-            'required': True,
-            'type': 'integer',
-            'description': 'ID del pedido'
-        },
-        {
-            'name': 'body',
-            'in': 'body',
-            'required': True,
-            'schema': {
-                'type': 'object',
-                'properties': {
-                    'fecha_envio': {'type': 'string', 'format': 'date-time', 'example': '2023-01-01T10:00:00'},
-                    'fecha_entrega': {'type': 'string', 'format': 'date-time', 'example': '2023-01-05T10:00:00'},
-                    'fecha_pago': {'type': 'string', 'format': 'date-time', 'example': '2023-01-02T10:00:00'},
-                    'estado_pedido_id': {'type': 'integer', 'example': 1},
-                    'direccion_id': {'type': 'integer', 'example': 1},
-                    'precio': {'type': 'string', 'example': '100.00'},
-                    'impuesto_id': {'type': 'integer', 'example': 1},
-                    'precio_final': {'type': 'string', 'example': '112.00'},
-                    'pago_id': {'type': 'string', 'example': 'PAY123'},
-                    'usuario_id': {'type': 'integer', 'example': 1}
-                }
-            }
-        }
-    ],
-    'responses': {
-        200: {'description': 'Pedido actualizado exitosamente'},
-        400: {'description': 'Error al actualizar el pedido'}
-    }
-})
-def update_pedido(pedido_id):
-    """Actualizar un pedido existente"""
-    data = request.get_json()
-    usuario_id = data.pop('usuario_id', None)
-    try:
-        pedido = Pedidos.query.get_or_404(pedido_id)
-        for key, value in data.items():
-            setattr(pedido, key, value)
-        db.session.commit()
-
-        if usuario_id:
-            pedidos_usuario = PedidosUsuario.query.filter_by(pedido_id=pedido_id).first()
-            if pedidos_usuario:
-                pedidos_usuario.usuario_id = usuario_id
-            else:
-                nuevo_usuario = PedidosUsuario(pedido_id=pedido_id, usuario_id=usuario_id)
-                db.session.add(nuevo_usuario)
-            db.session.commit()
-
-        return jsonify(pedido_schema.dump(pedido)), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
-
-@pedidos_bp.route('/<int:pedido_id>', methods=['DELETE'])
-@swag_from({
-    'tags': ['Pedidos'],
-    'summary': 'Eliminar pedido',
-    'description': 'Elimina un pedido y su asociación con un usuario si existe.',
-    'parameters': [
-        {
-            'name': 'pedido_id',
-            'in': 'path',
-            'required': True,
-            'type': 'integer',
-            'description': 'ID del pedido'
-        }
-    ],
-    'responses': {
-        200: {'description': 'Pedido eliminado exitosamente'},
-        400: {'description': 'Error al eliminar el pedido'}
-    }
-})
-def delete_pedido(pedido_id):
-    """Eliminar un pedido"""
-    try:
-        pedido = Pedidos.query.get_or_404(pedido_id)
-        PedidosUsuario.query.filter_by(pedido_id=pedido_id).delete()
-        db.session.delete(pedido)
-        db.session.commit()
-        return jsonify({"message": "Pedido eliminado exitosamente"}), 200
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 400
+    return jsonify(response), 200
