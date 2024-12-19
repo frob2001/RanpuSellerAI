@@ -534,3 +534,48 @@ def update_producto(producto_id):
         db.session.rollback()
         return jsonify({"message": "Error al actualizar el producto", "error": str(e)}), 500
 
+
+@productos_bp.route('/<int:producto_id>', methods=['DELETE'])
+@swag_from({
+    'tags': ['Productos'],
+    'summary': 'Eliminar un producto y sus relaciones',
+    'description': 'Elimina un producto de la base de datos junto con todas las filas relacionadas en las tablas de imágenes y detalles.',
+    'parameters': [
+        {
+            'name': 'producto_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del producto a eliminar'
+        }
+    ],
+    'responses': {
+        200: {'description': 'Producto eliminado exitosamente'},
+        404: {'description': 'Producto no encontrado'},
+        500: {'description': 'Error al eliminar el producto'}
+    }
+})
+def delete_producto(producto_id):
+    """Eliminar un producto y todas sus relaciones (imágenes y detalles)."""
+    producto = Productos.query.get(producto_id)
+    if not producto:
+        return jsonify({"message": "Producto no encontrado"}), 404
+
+    try:
+        # Eliminar imágenes relacionadas
+        ImagenesProductos.query.filter_by(producto_id=producto_id).delete()
+
+        # Eliminar detalles relacionados
+        DetallesCatalogo.query.filter_by(producto_id=producto_id).delete()
+        DetallesLamparasRanpu.query.filter_by(producto_id=producto_id).delete()
+        DetallesProductosIA.query.filter_by(producto_id=producto_id).delete()
+
+        # Eliminar el producto
+        db.session.delete(producto)
+        db.session.commit()
+
+        return jsonify({"message": "Producto eliminado exitosamente"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al eliminar el producto", "error": str(e)}), 500
