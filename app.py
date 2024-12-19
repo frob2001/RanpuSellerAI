@@ -29,7 +29,7 @@ init_swagger(app)
 #Blueprints for APIs
 app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
 app.register_blueprint(estados_pedidos_bp, url_prefix="/api/estados_pedidos")
-app.register_blueprint(estados_pedidos_bp, url_prefix="/api/impuestos")
+app.register_blueprint(impuestos_bp, url_prefix="/api/impuestos")
 
 # Configuration in production mode
 app.config.from_object(config['production'])

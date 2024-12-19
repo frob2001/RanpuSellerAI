@@ -3,8 +3,8 @@ from .usuarios import Usuarios
 # from .pedidos_usuario import PedidosUsuario
 # from .pedidos import Pedidos
 # from .productos_pedidos import ProductosPedidos
-# from .estados_pedidos import EstadosPedidos
-# from .impuestos import Impuestos
+from .estados_pedidos import EstadosPedidos
+from .impuestos import Impuestos
 
 
 # from .categorias_filamentos import CategoriasFilamentos
