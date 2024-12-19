@@ -271,8 +271,24 @@ def get_producto_por_id(producto_id):
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'message': {'type': 'string', 'example': 'Producto creado exitosamente'},
-                    'producto': {'type': 'object'}
+                    'producto_id': {'type': 'integer', 'example': 1},
+                    'nombre': {'type': 'string', 'example': 'Lámpara Inteligente'},
+                    'descripcion': {'type': 'string', 'example': 'Lámpara con diseño moderno y conexión Wi-Fi'},
+                    'alto': {'type': 'string', 'example': '12.00'},
+                    'ancho': {'type': 'string', 'example': '6.00'},
+                    'largo': {'type': 'string', 'example': '9.00'},
+                    'gbl': {'type': 'string', 'example': 'path/to/file.gbl'},
+                    'precio': {'type': 'string', 'example': '29.99'},
+                    'categoria_producto': {
+                        'type': 'object',
+                        'properties': {
+                            'categoria_producto_id': {'type': 'integer', 'example': 1},
+                            'nombre': {'type': 'string', 'example': 'Electrónica'}
+                        }
+                    },
+                    'detalles_catalogo': {'type': 'string', 'example': 'Lámpara incluida en catálogo'},
+                    'detalles_lamparas_ranpu': {'type': 'string', 'example': 'Detalles específicos de Ranpu'},
+                    'detalles_productos_ia': {'type': 'string', 'example': 'Detalles generados por IA'}
                 }
             }
         },
@@ -344,7 +360,7 @@ def create_producto():
             "detalles": data['detalles_productos_ia']['detalles'] if 'detalles_productos_ia' in data else None
         }
 
-        return jsonify({"message": "Producto creado exitosamente", "producto": response}), 201
+        return jsonify(response), 201
 
     except Exception as e:
         db.session.rollback()
