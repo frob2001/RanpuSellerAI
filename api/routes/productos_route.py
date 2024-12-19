@@ -57,7 +57,7 @@ def get_productos():
         data["detalles_lamparas_ranpu"] = DetallesLamparasRanpu.query.filter_by(producto_id=producto.producto_id).first()
         data["detalles_productos_ia"] = DetallesProductosIA.query.filter_by(producto_id=producto.producto_id).first()
         resultado.append(data)
-    return jsonify(resultado), 20
+    return jsonify(resultado), 200
 
 @productos_bp.route('/<int:producto_id>', methods=['GET'])
 @swag_from({
