@@ -3,6 +3,7 @@ from flasgger import swag_from
 from ..models.pedidos import Pedidos
 from ..models.pedidos_usuario import PedidosUsuario
 from ..models.productos_pedidos import ProductosPedidos
+from ..models.direcciones import Direcciones
 from ..schemas.pedidos_schema import PedidosSchema
 from ..database import db
 
@@ -215,8 +216,8 @@ def get_pedido_por_id(pedido_id):
 @pedidos_bp.route('/', methods=['POST'])
 @swag_from({
     'tags': ['Pedidos'],
-    'summary': 'Crear un nuevo pedido',
-    'description': 'Crea un nuevo pedido, incluyendo productos relacionados, estado, dirección e impuesto.',
+    'summary': 'Crear un nuevo pedido con dirección',
+    'description': 'Crea un nuevo pedido, incluyendo la dirección asociada, productos relacionados, estado e impuesto.',
     'parameters': [
         {
             'name': 'body',
@@ -229,11 +230,29 @@ def get_pedido_por_id(pedido_id):
                     'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
                     'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
                     'estado_pedido_id': {'type': 'integer', 'example': 1},
-                    'direccion_id': {'type': 'integer', 'example': 1},
                     'impuesto_id': {'type': 'integer', 'example': 1},
                     'precio': {'type': 'string', 'example': '100.00'},
                     'precio_final': {'type': 'string', 'example': '112.00'},
                     'pago_id': {'type': 'string', 'example': 'PAY123'},
+                    'direccion': {
+                        'type': 'object',
+                        'properties': {
+                            'cedula': {'type': 'string', 'example': '1234567890'},
+                            'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                            'telefono': {'type': 'string', 'example': '+593999999999'},
+                            'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                            'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
+                            'ciudad': {'type': 'string', 'example': 'Springfield'},
+                            'provincia': {'type': 'string', 'example': 'Pichincha'},
+                            'numeracion': {'type': 'string', 'example': '123'},
+                            'referencia': {'type': 'string', 'example': 'Frente al parque'},
+                            'codigo_postal': {'type': 'string', 'example': '170123'}
+                        },
+                        'required': [
+                            'cedula', 'nombre_completo', 'telefono',
+                            'calle_principal', 'ciudad', 'provincia'
+                        ]
+                    },
                     'productos': {
                         'type': 'array',
                         'items': {
@@ -247,8 +266,9 @@ def get_pedido_por_id(pedido_id):
                 },
                 'required': [
                     'fecha_envio', 'fecha_entrega', 'fecha_pago',
-                    'estado_pedido_id', 'direccion_id', 'impuesto_id',
-                    'precio', 'precio_final', 'pago_id', 'productos'
+                    'estado_pedido_id', 'impuesto_id',
+                    'precio', 'precio_final', 'pago_id',
+                    'direccion', 'productos'
                 ]
             }
         }
@@ -260,7 +280,8 @@ def get_pedido_por_id(pedido_id):
                 'type': 'object',
                 'properties': {
                     'pedido_id': {'type': 'integer', 'example': 1},
-                    'message': {'type': 'string', 'example': 'Pedido creado exitosamente'}
+                    'direccion_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Pedido y dirección creados exitosamente'}
                 }
             }
         },
@@ -269,27 +290,43 @@ def get_pedido_por_id(pedido_id):
     }
 })
 def create_pedido():
-    """Crear un nuevo pedido, incluyendo productos relacionados."""
+    """Crear un nuevo pedido con dirección asociada, incluyendo productos relacionados."""
     data = request.get_json()
 
     # Validar campos obligatorios
     required_fields = [
         'fecha_envio', 'fecha_entrega', 'fecha_pago',
-        'estado_pedido_id', 'direccion_id', 'impuesto_id',
-        'precio', 'precio_final', 'pago_id', 'productos'
+        'estado_pedido_id', 'impuesto_id', 'precio', 'precio_final', 'pago_id', 'direccion', 'productos'
     ]
     for field in required_fields:
         if field not in data:
             return jsonify({"message": f"El campo '{field}' es obligatorio"}), 400
 
     try:
+        # Crear la dirección
+        direccion_data = data['direccion']
+        nueva_direccion = Direcciones(
+            cedula=direccion_data['cedula'],
+            nombre_completo=direccion_data['nombre_completo'],
+            telefono=direccion_data['telefono'],
+            calle_principal=direccion_data['calle_principal'],
+            calle_secundaria=direccion_data.get('calle_secundaria'),
+            ciudad=direccion_data['ciudad'],
+            provincia=direccion_data['provincia'],
+            numeracion=direccion_data.get('numeracion'),
+            referencia=direccion_data.get('referencia'),
+            codigo_postal=direccion_data.get('codigo_postal')
+        )
+        db.session.add(nueva_direccion)
+        db.session.flush()  # Obtener el direccion_id antes de confirmar
+
         # Crear el pedido
         nuevo_pedido = Pedidos(
             fecha_envio=data['fecha_envio'],
             fecha_entrega=data['fecha_entrega'],
             fecha_pago=data['fecha_pago'],
             estado_pedido_id=data['estado_pedido_id'],
-            direccion_id=data['direccion_id'],
+            direccion_id=nueva_direccion.direccion_id,
             impuesto_id=data['impuesto_id'],
             precio=data['precio'],
             precio_final=data['precio_final'],
@@ -312,7 +349,8 @@ def create_pedido():
         # Respuesta exitosa
         return jsonify({
             "pedido_id": nuevo_pedido.pedido_id,
-            "message": "Pedido creado exitosamente"
+            "direccion_id": nueva_direccion.direccion_id,
+            "message": "Pedido y dirección creados exitosamente"
         }), 201
 
     except Exception as e:
