@@ -6,7 +6,7 @@ class DetallesCatalogo(db.Model):
     producto_id = db.Column(db.Integer, db.ForeignKey('productos.producto_id'), primary_key=True)
     detalles = db.Column(db.String(50), nullable=False)
 
-    producto = db.relationship('Productos', backref=db.backref('detalles_catalogo', lazy=True))
+    producto = db.relationship('Productos', backref=db.backref('catalogo_detalles', lazy=True))
 
     def to_dict(self):
         return {

@@ -12,9 +12,11 @@ class Impresion(db.Model):
     impresora_id = db.Column(db.Integer, db.ForeignKey('impresoras.impresora_id'), nullable=False)
     filamento_id = db.Column(db.Integer, db.ForeignKey('filamentos.filamento_id'), nullable=False)
 
-    impresora = db.relationship('Impresoras', backref=db.backref('impresion', lazy=True))
-    filamento = db.relationship('Filamentos', backref=db.backref('impresion', lazy=True))
-    modelos = db.relationship('ModelosImpresion', backref='impresion', lazy=True)
+    # Relación con ModelosImpresion
+    modelos = db.relationship('ModelosImpresion', backref='impresion_list', lazy=True)
+
+    impresora = db.relationship('Impresoras', backref=db.backref('impresiones', lazy=True))
+    filamento = db.relationship('Filamentos', backref=db.backref('impresiones', lazy=True))
 
     def to_dict(self):
         return {
@@ -25,6 +27,5 @@ class Impresion(db.Model):
             "tiempo_impresion": self.tiempo_impresion.isoformat() if self.tiempo_impresion else None,
             "peso": str(self.peso),
             "impresora_id": self.impresora_id,
-            "filamento_id": self.filamento_id,
-            "modelos": [modelo.to_dict() for modelo in self.modelos]
+            "filamento_id": self.filamento_id
         }

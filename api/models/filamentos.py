@@ -14,9 +14,8 @@ class Filamentos(db.Model):
     fecha_compra = db.Column(db.DateTime, nullable=False)
     categoria_filamento_id = db.Column(db.Integer, db.ForeignKey('categorias_filamentos.categoria_filamento_id'), nullable=False)
 
+    # Relaciones
     categoria_filamento = db.relationship('CategoriasFilamentos', backref=db.backref('filamentos', lazy=True))
-    filamentos_compatibles = db.relationship('FilamentosCompatibles', backref='filamento', lazy=True)
-    impresiones = db.relationship('Impresion', backref='filamento', lazy=True)
 
     def to_dict(self):
         return {
@@ -29,7 +28,5 @@ class Filamentos(db.Model):
             "longitud_actual": str(self.longitud_actual),
             "precio_compra": str(self.precio_compra),
             "fecha_compra": self.fecha_compra.isoformat() if self.fecha_compra else None,
-            "categoria_filamento_id": self.categoria_filamento_id,
-            "filamentos_compatibles": [comp.to_dict() for comp in self.filamentos_compatibles],
-            "impresiones": [impresion.to_dict() for impresion in self.impresiones]
+            "categoria_filamento_id": self.categoria_filamento_id
         }

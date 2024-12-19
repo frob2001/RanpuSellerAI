@@ -5,7 +5,7 @@ class CategoriasFilamentos(db.Model):
 
     categoria_filamento_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nombre = db.Column(db.String(50), nullable=False)
-    descripcion = db.Column(db.String(1000), nullable=False)
+    descripcion = db.Column(db.String(1000), nullable=True)
     diametro = db.Column(db.Numeric(10, 2), nullable=False)
     temp_extrusion = db.Column(db.Numeric(10, 2), nullable=False)
     temp_cama = db.Column(db.Numeric(10, 2), nullable=False)
@@ -13,8 +13,6 @@ class CategoriasFilamentos(db.Model):
     flexibilidad = db.Column(db.Numeric(10, 2), nullable=False)
     material_base = db.Column(db.String(50), nullable=False)
     precio_kg = db.Column(db.Numeric(10, 2), nullable=False)
-
-    filamentos = db.relationship('Filamentos', backref='categoria_filamento', lazy=True)
 
     def to_dict(self):
         return {

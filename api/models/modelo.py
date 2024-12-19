@@ -12,8 +12,8 @@ class Modelo(db.Model):
     stock = db.Column(db.Integer, nullable=False)
     producto_id = db.Column(db.Integer, db.ForeignKey('productos.producto_id'), nullable=False)
 
-    producto = db.relationship('Productos', backref=db.backref('modelo', lazy=True))
-    impresiones = db.relationship('ModelosImpresion', backref='modelo', lazy=True)
+    # Cambiar el nombre del backref
+    producto = db.relationship('Productos', backref=db.backref('modelos', lazy=True))
 
     def to_dict(self):
         return {
@@ -24,6 +24,5 @@ class Modelo(db.Model):
             "largo": str(self.largo),
             "stl": self.stl,
             "stock": self.stock,
-            "producto_id": self.producto_id,
-            "impresiones": [impresion.to_dict() for impresion in self.impresiones]
+            "producto_id": self.producto_id
         }

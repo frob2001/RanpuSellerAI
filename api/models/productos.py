@@ -15,11 +15,11 @@ class Productos(db.Model):
 
     categoria_producto = db.relationship('CategoriasProductos', backref=db.backref('productos', lazy=True))
     imagenes_productos = db.relationship('ImagenesProductos', backref='producto', lazy=True)
-    detalles_catalogo = db.relationship('DetallesCatalogo', backref='producto', lazy=True)
-    detalles_lamparas_ranpu = db.relationship('DetallesLamparasRanpu', backref='producto', lazy=True)
-    detalles_productos_ia = db.relationship('DetallesProductosIA', backref='producto', lazy=True)
     modelo = db.relationship('Modelo', backref='producto', lazy=True)
-    pedidos = db.relationship('ProductosPedidos', backref='producto', lazy=True)
+    productos_pedidos = db.relationship('ProductosPedidos', backref='producto', lazy=True)
+
+    # Esta línea es redundante si ya está declarada en DetallesCatalogo
+    # detalles_catalogo_list = db.relationship('DetallesCatalogo', backref='producto', lazy=True)
 
     def to_dict(self):
         return {

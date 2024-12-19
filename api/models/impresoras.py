@@ -15,9 +15,7 @@ class Impresoras(db.Model):
     consumo_electrico = db.Column(db.Numeric(10, 2), nullable=False)
     filamento_id = db.Column(db.Integer, db.ForeignKey('filamentos.filamento_id'), nullable=False)
 
-    estado_impresora = db.relationship('EstadosImpresoras', backref=db.backref('impresoras', lazy=True))
     filamento = db.relationship('Filamentos', backref=db.backref('impresoras', lazy=True))
-    filamentos_compatibles = db.relationship('FilamentosCompatibles', backref='impresora', lazy=True)
 
     def to_dict(self):
         return {
