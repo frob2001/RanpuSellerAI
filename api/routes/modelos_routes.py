@@ -31,6 +31,7 @@ modelos_schema = ModelosSchema(many=True)
                         'largo': {'type': 'string', 'example': '7.00'},
                         'stl': {'type': 'string', 'example': 'path/to/file.stl'},
                         'stock': {'type': 'integer', 'example': 100},
+                        'producto_id': {'type': 'integer', 'example': 1},
                         'producto': {
                             'type': 'object',
                             'properties': {
@@ -48,7 +49,11 @@ def get_todos_modelos():
     """Obtener todos los modelos registrados, incluyendo el producto asociado."""
     modelos = Modelos.query.all()
     response = [
-        {**modelo_schema.dump(modelo), "producto": modelo.producto.to_dict()} for modelo in modelos
+        {
+            **modelo_schema.dump(modelo),
+            "producto_id": modelo.producto_id,
+            "producto": modelo.producto.to_dict()
+        } for modelo in modelos
     ]
     return jsonify(response), 200
 
@@ -77,7 +82,11 @@ def get_modelo_por_id(modelo_id):
     modelo = Modelos.query.get(modelo_id)
     if not modelo:
         return jsonify({"message": "Modelo no encontrado"}), 404
-    response = {**modelo_schema.dump(modelo), "producto": modelo.producto.to_dict()}
+    response = {
+        **modelo_schema.dump(modelo),
+        "producto_id": modelo.producto_id,
+        "producto": modelo.producto.to_dict()
+    }
     return jsonify(response), 200
 
 
@@ -110,6 +119,7 @@ def get_modelo_por_id(modelo_id):
                         'largo': {'type': 'string', 'example': '7.00'},
                         'stl': {'type': 'string', 'example': 'path/to/file.stl'},
                         'stock': {'type': 'integer', 'example': 100},
+                        'producto_id': {'type': 'integer', 'example': 1},
                         'producto': {
                             'type': 'object',
                             'properties': {
@@ -130,6 +140,10 @@ def get_modelos_por_producto(producto_id):
     if not modelos:
         return jsonify({"message": "No se encontraron modelos para este producto"}), 404
     response = [
-        {**modelo_schema.dump(modelo), "producto": modelo.producto.to_dict()} for modelo in modelos
+        {
+            **modelo_schema.dump(modelo),
+            "producto_id": modelo.producto_id,
+            "producto": modelo.producto.to_dict()
+        } for modelo in modelos
     ]
     return jsonify(response), 200
