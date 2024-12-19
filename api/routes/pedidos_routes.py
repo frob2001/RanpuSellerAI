@@ -221,6 +221,118 @@ def get_pedido_por_id(pedido_id):
 
     return jsonify(response), 200
 
+@pedidos_bp.route('/usuario/<int:usuario_id>', methods=['GET'])
+@swag_from({
+    'tags': ['Pedidos'],
+    'summary': 'Obtener pedidos por ID de usuario',
+    'description': 'Obtiene una lista de todos los pedidos asociados a un usuario específico, incluyendo detalles de estado, dirección, impuesto, productos relacionados y usuario asociado.',
+    'parameters': [
+        {
+            'name': 'usuario_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del usuario cuyos pedidos se desean obtener'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Lista de pedidos para el usuario',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'pedido_id': {'type': 'integer', 'example': 1},
+                        'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
+                        'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
+                        'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
+                        'estado_pedido': {
+                            'type': 'object',
+                            'properties': {
+                                'estado_pedido_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'Imprimiendo'}
+                            }
+                        },
+                        'direccion': {
+                            'type': 'object',
+                            'properties': {
+                                'direccion_id': {'type': 'integer', 'example': 1},
+                                'cedula': {'type': 'string', 'example': '1234567890'},
+                                'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                                'telefono': {'type': 'string', 'example': '+593999999999'},
+                                'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                                'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
+                                'ciudad': {'type': 'string', 'example': 'Springfield'},
+                                'provincia': {'type': 'string', 'example': 'Pichincha'},
+                                'numeracion': {'type': 'string', 'example': '123'},
+                                'referencia': {'type': 'string', 'example': 'Frente al parque'},
+                                'codigo_postal': {'type': 'string', 'example': '170123'}
+                            }
+                        },
+                        'impuesto': {
+                            'type': 'object',
+                            'properties': {
+                                'impuesto_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'IVA'},
+                                'porcentaje': {'type': 'string', 'example': '15.00'}
+                            }
+                        },
+                        'usuario_id': {'type': 'integer', 'example': 1},
+                        'pago_id': {'type': 'string', 'example': 'PAY123'},
+                        'precio': {'type': 'string', 'example': '100.00'},
+                        'precio_final': {'type': 'string', 'example': '112.00'},
+                        'productos': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'producto_id': {'type': 'integer', 'example': 1},
+                                    'nombre': {'type': 'string', 'example': 'Lámpara Redonda'},
+                                    'cantidad': {'type': 'integer', 'example': 2}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        404: {'description': 'Usuario no encontrado o sin pedidos'}
+    }
+})
+def get_pedidos_por_usuario(usuario_id):
+    """Obtener todos los pedidos asociados a un usuario, incluyendo detalles, productos relacionados y usuario asociado."""
+    pedidos_usuario = PedidosUsuario.query.filter_by(usuario_id=usuario_id).all()
+    if not pedidos_usuario:
+        return jsonify({"message": "Usuario no encontrado o sin pedidos"}), 404
+
+    response = []
+    for pedido_usuario in pedidos_usuario:
+        pedido = Pedidos.query.get(pedido_usuario.pedido_id)
+        if pedido:
+            productos_pedidos = [
+                {
+                    "producto_id": item.producto.producto_id,
+                    "nombre": item.producto.nombre,
+                    "cantidad": item.cantidad
+                } for item in ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
+            ]
+
+            pedido_dict = pedido.to_dict()
+            pedido_dict.pop("estado_pedido_id", None)
+            pedido_dict.pop("direccion_id", None)
+            pedido_dict.pop("impuesto_id", None)
+
+            pedido_dict["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
+            pedido_dict["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
+            pedido_dict["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
+            pedido_dict["productos"] = productos_pedidos
+            pedido_dict["usuario_id"] = usuario_id
+
+            response.append(pedido_dict)
+
+    return jsonify(response), 200
+
 
 @pedidos_bp.route('/', methods=['POST'])
 @swag_from({
