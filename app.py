@@ -14,12 +14,22 @@ from api.database import init_db
 from api.swagger import init_swagger
 
 #API ROUTES
-from api.routes import usuarios_bp, estados_pedidos_bp
+from api.routes import (
+    usuarios_bp, 
+    estados_pedidos_bp, 
+    impuestos_bp
+                        
+)
 
 app = Flask(__name__)
 
 init_db(app)
 init_swagger(app)
+
+#Blueprints for APIs
+app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
+app.register_blueprint(estados_pedidos_bp, url_prefix="/api/estados_pedidos")
+app.register_blueprint(estados_pedidos_bp, url_prefix="/api/impuestos")
 
 # Configuration in production mode
 app.config.from_object(config['production'])
@@ -168,10 +178,6 @@ def get_conversations(user_id):
 
 #Rutas para litofanias
 app.register_blueprint(lithophane_bp)
-
-#Blueprints for APIs
-app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
-app.register_blueprint(estados_pedidos_bp, url_prefix="/api/estados_pedidos")
 
 
 # Página principal
