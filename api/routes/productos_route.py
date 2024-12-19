@@ -224,8 +224,8 @@ def get_producto_por_id(producto_id):
 @productos_bp.route('/', methods=['POST'])
 @swag_from({
     'tags': ['Productos'],
-    'summary': 'Crear un nuevo producto',
-    'description': 'Crea un nuevo producto y, opcionalmente, puede agregar detalles en las tablas relacionadas (detalles_catalogo, detalles_lamparas_ranpu y detalles_productos_ia).',
+    'summary': 'Crear un nuevo producto con detalles relacionados',
+    'description': 'Crea un nuevo producto y, opcionalmente, puede agregar detalles en las tablas relacionadas (detalles_catalogo, detalles_lamparas_ranpu y detalles_productos_ia) utilizando un formato anidado.',
     'parameters': [
         {
             'name': 'body',
@@ -242,9 +242,24 @@ def get_producto_por_id(producto_id):
                     'gbl': {'type': 'string', 'example': 'path/to/file.gbl'},
                     'precio': {'type': 'string', 'example': '29.99'},
                     'categoria_producto_id': {'type': 'integer', 'example': 1},
-                    'detalles_catalogo': {'type': 'string', 'example': 'Lámpara incluida en catálogo'},
-                    'detalles_lamparas_ranpu': {'type': 'string', 'example': 'Detalles específicos de Ranpu'},
-                    'detalles_productos_ia': {'type': 'string', 'example': 'Detalles generados por IA'}
+                    'detalles_catalogo': {
+                        'type': 'object',
+                        'properties': {
+                            'detalles': {'type': 'string', 'example': 'Lámpara incluida en catálogo'}
+                        }
+                    },
+                    'detalles_lamparas_ranpu': {
+                        'type': 'object',
+                        'properties': {
+                            'detalles': {'type': 'string', 'example': 'Detalles específicos de Ranpu'}
+                        }
+                    },
+                    'detalles_productos_ia': {
+                        'type': 'object',
+                        'properties': {
+                            'detalles': {'type': 'string', 'example': 'Detalles generados por IA'}
+                        }
+                    }
                 },
                 'required': ['nombre', 'descripcion', 'alto', 'ancho', 'largo', 'gbl', 'precio', 'categoria_producto_id']
             }
@@ -290,24 +305,24 @@ def create_producto():
         db.session.flush()  # Obtener producto_id antes de commit
 
         # Crear detalles opcionales
-        if 'detalles_catalogo' in data:
+        if 'detalles_catalogo' in data and data['detalles_catalogo'].get('detalles'):
             detalles_catalogo = DetallesCatalogo(
                 producto_id=nuevo_producto.producto_id,
-                detalles=data['detalles_catalogo']
+                detalles=data['detalles_catalogo']['detalles']
             )
             db.session.add(detalles_catalogo)
 
-        if 'detalles_lamparas_ranpu' in data:
+        if 'detalles_lamparas_ranpu' in data and data['detalles_lamparas_ranpu'].get('detalles'):
             detalles_lamparas_ranpu = DetallesLamparasRanpu(
                 producto_id=nuevo_producto.producto_id,
-                detalles=data['detalles_lamparas_ranpu']
+                detalles=data['detalles_lamparas_ranpu']['detalles']
             )
             db.session.add(detalles_lamparas_ranpu)
 
-        if 'detalles_productos_ia' in data:
+        if 'detalles_productos_ia' in data and data['detalles_productos_ia'].get('detalles'):
             detalles_productos_ia = DetallesProductosIA(
                 producto_id=nuevo_producto.producto_id,
-                detalles=data['detalles_productos_ia']
+                detalles=data['detalles_productos_ia']['detalles']
             )
             db.session.add(detalles_productos_ia)
 
@@ -316,9 +331,18 @@ def create_producto():
         # Respuesta exitosa
         response = nuevo_producto.to_dict()
         response["categoria_producto"] = nuevo_producto.categoria_producto.to_dict() if nuevo_producto.categoria_producto else None
-        response["detalles_catalogo"] = data.get('detalles_catalogo')
-        response["detalles_lamparas_ranpu"] = data.get('detalles_lamparas_ranpu')
-        response["detalles_productos_ia"] = data.get('detalles_productos_ia')
+        response["detalles_catalogo"] = {
+            "producto_id": nuevo_producto.producto_id,
+            "detalles": data['detalles_catalogo']['detalles'] if 'detalles_catalogo' in data else None
+        }
+        response["detalles_lamparas_ranpu"] = {
+            "producto_id": nuevo_producto.producto_id,
+            "detalles": data['detalles_lamparas_ranpu']['detalles'] if 'detalles_lamparas_ranpu' in data else None
+        }
+        response["detalles_productos_ia"] = {
+            "producto_id": nuevo_producto.producto_id,
+            "detalles": data['detalles_productos_ia']['detalles'] if 'detalles_productos_ia' in data else None
+        }
 
         return jsonify({"message": "Producto creado exitosamente", "producto": response}), 201
 
