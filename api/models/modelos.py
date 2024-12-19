@@ -1,7 +1,7 @@
 from ..database import db
 
-class Modelo(db.Model):
-    __tablename__ = "modelo"
+class Modelos(db.Model):
+    __tablename__ = "modelos"
 
     modelo_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     tiempo_estimado = db.Column(db.Time, nullable=False)

@@ -9,19 +9,18 @@ from .direcciones_schema import DireccionesSchema
 from .categorias_productos_schema import CategoriasProductosSchema
 from .productos_schema import ProductosSchema
 from .imagenes_productos_schema import ImagenesProductosSchema
-
-
-# from .categorias_filamentos_schema import CategoriasFilamentosSchema
 from .detalles_catalogo_schema import DetallesCatalogoSchema
 from .detalles_lamparas_ranpu_schema import DetallesLamparasRanpuSchema
 from .detalles_productos_ia_schema import DetallesProductosIASchema
+from .modelos_schema import ModelosSchema
+
+# from .categorias_filamentos_schema import CategoriasFilamentosSchema
 # from .estados_impresoras_schema import EstadosImpresorasSchema
 # from .filamentos_schema import FilamentosSchema
 # from .filamentos_compatibles_schema import FilamentosCompatiblesSchema
 
 # from .impresion_schema import ImpresionSchema
 # from .impresoras_schema import ImpresorasSchema
-# from .modelo_schema import ModeloSchema
 # from .modelos_impresion_schema import ModelosImpresionSchema
 
 
