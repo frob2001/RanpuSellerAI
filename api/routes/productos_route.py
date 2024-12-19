@@ -5,6 +5,7 @@ from ..models.categorias_productos import CategoriasProductos
 from ..models.detalles_catalogo import DetallesCatalogo
 from ..models.detalles_lamparas_ranpu import DetallesLamparasRanpu
 from ..models.detalles_productos_ia import DetallesProductosIA
+from ..models.imagenes_productos import ImagenesProductos
 from ..database import db
 
 productos_bp = Blueprint('productos', __name__)
@@ -224,8 +225,8 @@ def get_producto_por_id(producto_id):
 @productos_bp.route('/', methods=['POST'])
 @swag_from({
     'tags': ['Productos'],
-    'summary': 'Crear un nuevo producto con detalles relacionados',
-    'description': 'Crea un nuevo producto y, opcionalmente, puede agregar detalles en las tablas relacionadas (detalles_catalogo, detalles_lamparas_ranpu y detalles_productos_ia) utilizando un formato anidado.',
+    'summary': 'Crear un nuevo producto con detalles e imágenes relacionadas',
+    'description': 'Crea un nuevo producto, incluyendo detalles en las tablas relacionadas (detalles_catalogo, detalles_lamparas_ranpu, detalles_productos_ia) y permite subir varias imágenes asociadas.',
     'parameters': [
         {
             'name': 'body',
@@ -259,6 +260,16 @@ def get_producto_por_id(producto_id):
                         'properties': {
                             'detalles': {'type': 'string', 'example': 'Detalles generados por IA'}
                         }
+                    },
+                    'imagenes': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'ubicacion': {'type': 'string', 'example': '/images/product1_front.jpg'},
+                                'descripcion': {'type': 'string', 'example': 'Vista frontal'}
+                            }
+                        }
                     }
                 },
                 'required': ['nombre', 'descripcion', 'alto', 'ancho', 'largo', 'gbl', 'precio', 'categoria_producto_id']
@@ -273,22 +284,16 @@ def get_producto_por_id(producto_id):
                 'properties': {
                     'producto_id': {'type': 'integer', 'example': 1},
                     'nombre': {'type': 'string', 'example': 'Lámpara Inteligente'},
-                    'descripcion': {'type': 'string', 'example': 'Lámpara con diseño moderno y conexión Wi-Fi'},
-                    'alto': {'type': 'string', 'example': '12.00'},
-                    'ancho': {'type': 'string', 'example': '6.00'},
-                    'largo': {'type': 'string', 'example': '9.00'},
-                    'gbl': {'type': 'string', 'example': 'path/to/file.gbl'},
-                    'precio': {'type': 'string', 'example': '29.99'},
-                    'categoria_producto': {
-                        'type': 'object',
-                        'properties': {
-                            'categoria_producto_id': {'type': 'integer', 'example': 1},
-                            'nombre': {'type': 'string', 'example': 'Electrónica'}
+                    'imagenes': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'ubicacion': {'type': 'string', 'example': '/images/product1_front.jpg'},
+                                'descripcion': {'type': 'string', 'example': 'Vista frontal'}
+                            }
                         }
-                    },
-                    'detalles_catalogo': {'type': 'string', 'example': 'Lámpara incluida en catálogo'},
-                    'detalles_lamparas_ranpu': {'type': 'string', 'example': 'Detalles específicos de Ranpu'},
-                    'detalles_productos_ia': {'type': 'string', 'example': 'Detalles generados por IA'}
+                    }
                 }
             }
         },
@@ -296,7 +301,7 @@ def get_producto_por_id(producto_id):
     }
 })
 def create_producto():
-    """Crear un producto y, opcionalmente, agregar detalles en tablas relacionadas."""
+    """Crear un producto y, opcionalmente, agregar detalles e imágenes relacionadas."""
     data = request.get_json()
 
     # Validar campos obligatorios
@@ -342,6 +347,16 @@ def create_producto():
             )
             db.session.add(detalles_productos_ia)
 
+        # Crear imágenes
+        if 'imagenes' in data:
+            for imagen_data in data['imagenes']:
+                nueva_imagen = ImagenesProductos(
+                    producto_id=nuevo_producto.producto_id,
+                    ubicacion=imagen_data['ubicacion'],
+                    descripcion=imagen_data['descripcion']
+                )
+                db.session.add(nueva_imagen)
+
         db.session.commit()
 
         # Respuesta exitosa
@@ -359,6 +374,10 @@ def create_producto():
             "producto_id": nuevo_producto.producto_id,
             "detalles": data['detalles_productos_ia']['detalles'] if 'detalles_productos_ia' in data else None
         }
+        response["imagenes"] = [
+            {"ubicacion": img['ubicacion'], "descripcion": img['descripcion']}
+            for img in data['imagenes']
+        ] if 'imagenes' in data else []
 
         return jsonify(response), 201
 
