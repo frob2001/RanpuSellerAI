@@ -31,7 +31,6 @@ modelos_schema = ModelosSchema(many=True)
                         'largo': {'type': 'string', 'example': '7.00'},
                         'stl': {'type': 'string', 'example': 'path/to/file.stl'},
                         'stock': {'type': 'integer', 'example': 100},
-                        'producto_id': {'type': 'integer', 'example': 1},
                         'producto': {
                             'type': 'object',
                             'properties': {
@@ -51,8 +50,10 @@ def get_todos_modelos():
     response = [
         {
             **modelo_schema.dump(modelo),
-            "producto_id": modelo.producto_id,
-            "producto": modelo.producto.to_dict()
+            "producto": {
+                **modelo.producto.to_dict(),
+                "producto_id": modelo.producto_id  # Incluyendo producto_id dentro del objeto producto
+            }
         } for modelo in modelos
     ]
     return jsonify(response), 200
@@ -84,8 +85,10 @@ def get_modelo_por_id(modelo_id):
         return jsonify({"message": "Modelo no encontrado"}), 404
     response = {
         **modelo_schema.dump(modelo),
-        "producto_id": modelo.producto_id,
-        "producto": modelo.producto.to_dict()
+        "producto": {
+            **modelo.producto.to_dict(),
+            "producto_id": modelo.producto_id  # Incluyendo producto_id dentro del objeto producto
+        }
     }
     return jsonify(response), 200
 
@@ -119,7 +122,6 @@ def get_modelo_por_id(modelo_id):
                         'largo': {'type': 'string', 'example': '7.00'},
                         'stl': {'type': 'string', 'example': 'path/to/file.stl'},
                         'stock': {'type': 'integer', 'example': 100},
-                        'producto_id': {'type': 'integer', 'example': 1},
                         'producto': {
                             'type': 'object',
                             'properties': {
@@ -142,8 +144,10 @@ def get_modelos_por_producto(producto_id):
     response = [
         {
             **modelo_schema.dump(modelo),
-            "producto_id": modelo.producto_id,
-            "producto": modelo.producto.to_dict()
+            "producto": {
+                **modelo.producto.to_dict(),
+                "producto_id": modelo.producto_id  # Incluyendo producto_id dentro del objeto producto
+            }
         } for modelo in modelos
     ]
     return jsonify(response), 200
