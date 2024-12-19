@@ -1,15 +1,15 @@
 #PRIMERA PARTE
-from .usuarios_schema import UsuariosSchema
+# from .usuarios_schema import UsuariosSchema
 # from .pedidos_usuario_schema import PedidosUsuarioSchema
 # from .pedidos_schema import PedidosSchema
 # from .productos_pedidos_schema import ProductosPedidosSchema
 from .estados_pedidos_schema import EstadosPedidosSchema
 from .impuestos_schema import ImpuestosSchema
 from .direcciones_schema import DireccionesSchema
+from .categorias_productos_schema import CategoriasProductosSchema
 
 
 # from .categorias_filamentos_schema import CategoriasFilamentosSchema
-# from .categorias_productos_schema import CategoriasProductosSchema
 # from .detalles_catalogo_schema import DetallesCatalogoSchema
 # from .detalles_lamparas_ranpu_schema import DetallesLamparasRanpuSchema
 # from .detalles_productos_ia_schema import DetallesProductosIASchema

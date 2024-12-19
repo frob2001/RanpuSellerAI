@@ -19,7 +19,7 @@ from api.routes import (
     estados_pedidos_bp, 
     impuestos_bp,
     direcciones_bp,
-    pedidos_bp
+    categorias_productos_bp
     
                         
 )
@@ -34,7 +34,7 @@ app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
 app.register_blueprint(estados_pedidos_bp, url_prefix="/api/estados_pedidos")
 app.register_blueprint(impuestos_bp, url_prefix="/api/impuestos")
 app.register_blueprint(direcciones_bp, url_prefix="/api/direcciones")
-app.register_blueprint(pedidos_bp, url_prefix="/api/pedidos")
+app.register_blueprint(categorias_productos_bp, url_prefix="/api/categorias_productos")
 
 # Configuration in production mode
 app.config.from_object(config['production'])

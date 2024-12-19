@@ -17,7 +17,7 @@ class Pedidos(db.Model):
     estado_pedido = db.relationship('EstadosPedidos', backref=db.backref('pedidos', lazy=True))
     direcciones = db.relationship('Direcciones', backref=db.backref('pedidos', lazy=True))
     impuesto = db.relationship('Impuestos', backref=db.backref('pedidos', lazy=True))
-    productos = db.relationship('ProductosPedidos', backref='pedido', lazy=True)
+    productos_pedidos = db.relationship('ProductosPedidos', backref='pedido', lazy=True)  # Relación corregida
     usuarios = db.relationship('PedidosUsuario', backref='pedido', lazy=True)
 
     def to_dict(self):
