@@ -18,7 +18,7 @@ multiple_pedidos_schema = PedidosSchema(many=True)
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener todos los pedidos',
-    'description': 'Obtiene una lista de todos los pedidos, incluyendo detalles de estado, dirección, impuesto y productos relacionados.',
+    'description': 'Obtiene una lista de todos los pedidos, incluyendo detalles de estado, dirección, impuesto, productos relacionados y usuario asociado.',
     'responses': {
         200: {
             'description': 'Lista de pedidos',
@@ -62,6 +62,7 @@ multiple_pedidos_schema = PedidosSchema(many=True)
                                 'porcentaje': {'type': 'string', 'example': '15.00'}
                             }
                         },
+                        'usuario_id': {'type': 'integer', 'example': 1},
                         'pago_id': {'type': 'string', 'example': 'PAY123'},
                         'precio': {'type': 'string', 'example': '100.00'},
                         'precio_final': {'type': 'string', 'example': '112.00'},
@@ -83,7 +84,7 @@ multiple_pedidos_schema = PedidosSchema(many=True)
     }
 })
 def get_todos_pedidos():
-    """Obtener todos los pedidos, incluyendo detalles y productos relacionados."""
+    """Obtener todos los pedidos, incluyendo detalles, productos relacionados y usuario asociado."""
     pedidos = Pedidos.query.all()
     response = []
     for pedido in pedidos:
@@ -95,6 +96,9 @@ def get_todos_pedidos():
             } for item in ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
         ]
 
+        usuario_pedido = PedidosUsuario.query.filter_by(pedido_id=pedido.pedido_id).first()
+        usuario_id = usuario_pedido.usuario_id if usuario_pedido else None
+
         pedido_dict = pedido.to_dict()
         pedido_dict.pop("estado_pedido_id", None)
         pedido_dict.pop("direccion_id", None)
@@ -104,6 +108,7 @@ def get_todos_pedidos():
         pedido_dict["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
         pedido_dict["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
         pedido_dict["productos"] = productos_pedidos
+        pedido_dict["usuario_id"] = usuario_id
 
         response.append(pedido_dict)
 
@@ -114,7 +119,7 @@ def get_todos_pedidos():
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener un pedido por ID',
-    'description': 'Obtiene un pedido específico, incluyendo detalles de estado, dirección, impuesto y productos relacionados.',
+    'description': 'Obtiene un pedido específico, incluyendo detalles, productos relacionados y usuario asociado.',
     'parameters': [
         {
             'name': 'pedido_id',
@@ -165,6 +170,7 @@ def get_todos_pedidos():
                             'porcentaje': {'type': 'string', 'example': '15.00'}
                         }
                     },
+                    'usuario_id': {'type': 'integer', 'example': 1},
                     'pago_id': {'type': 'string', 'example': 'PAY123'},
                     'precio': {'type': 'string', 'example': '100.00'},
                     'precio_final': {'type': 'string', 'example': '112.00'},
@@ -186,12 +192,11 @@ def get_todos_pedidos():
     }
 })
 def get_pedido_por_id(pedido_id):
-    """Obtener un pedido por su ID, incluyendo detalles y productos relacionados."""
+    """Obtener un pedido por su ID, incluyendo detalles, productos relacionados y usuario asociado."""
     pedido = Pedidos.query.get(pedido_id)
     if not pedido:
         return jsonify({"message": "Pedido no encontrado"}), 404
 
-    # Obtener productos relacionados del pedido
     productos_pedidos = [
         {
             "producto_id": item.producto.producto_id,
@@ -200,7 +205,9 @@ def get_pedido_por_id(pedido_id):
         } for item in ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
     ]
 
-    # Construir la respuesta
+    usuario_pedido = PedidosUsuario.query.filter_by(pedido_id=pedido.pedido_id).first()
+    usuario_id = usuario_pedido.usuario_id if usuario_pedido else None
+
     response = pedido.to_dict()
     response.pop("estado_pedido_id", None)
     response.pop("direccion_id", None)
@@ -210,8 +217,10 @@ def get_pedido_por_id(pedido_id):
     response["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
     response["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
     response["productos"] = productos_pedidos
+    response["usuario_id"] = usuario_id
 
     return jsonify(response), 200
+
 
 @pedidos_bp.route('/', methods=['POST'])
 @swag_from({
