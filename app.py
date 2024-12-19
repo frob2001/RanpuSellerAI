@@ -21,7 +21,8 @@ from api.routes import (
     direcciones_bp,
     categorias_productos_bp,
     productos_bp,
-    pedidos_bp         
+    pedidos_bp,
+    modelos_bp
 )
 
 app = Flask(__name__)
@@ -37,6 +38,7 @@ app.register_blueprint(direcciones_bp, url_prefix="/api/direcciones")
 app.register_blueprint(categorias_productos_bp, url_prefix="/api/categorias_productos")
 app.register_blueprint(productos_bp, url_prefix="/api/productos")
 app.register_blueprint(pedidos_bp, url_prefix="/api/pedidos")
+app.register_blueprint(modelos_bp, url_prefix="/api/modelos")
 
 # Configuration in production mode
 app.config.from_object(config['production'])
