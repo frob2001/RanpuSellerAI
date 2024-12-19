@@ -17,7 +17,8 @@ from api.swagger import init_swagger
 from api.routes import (
     usuarios_bp, 
     estados_pedidos_bp, 
-    impuestos_bp
+    impuestos_bp,
+    direcciones_bp
                         
 )
 
@@ -30,6 +31,7 @@ init_swagger(app)
 app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
 app.register_blueprint(estados_pedidos_bp, url_prefix="/api/estados_pedidos")
 app.register_blueprint(impuestos_bp, url_prefix="/api/impuestos")
+app.register_blueprint(direcciones_bp, url_prefix="/api/direcciones")
 
 # Configuration in production mode
 app.config.from_object(config['production'])

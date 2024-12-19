@@ -5,6 +5,7 @@ from .usuarios_schema import UsuariosSchema
 # from .productos_pedidos_schema import ProductosPedidosSchema
 from .estados_pedidos_schema import EstadosPedidosSchema
 from .impuestos_schema import ImpuestosSchema
+from .direcciones_schema import DireccionesSchema
 
 
 # from .categorias_filamentos_schema import CategoriasFilamentosSchema

@@ -1,9 +1,14 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from ..models.estados_pedidos import EstadosPedidos
+from ..schemas.estados_pedidos_schema import EstadosPedidosSchema
 from ..database import db
 
 estados_pedidos_bp = Blueprint('estados_pedidos', __name__)
+
+# Instancias de los schemas
+estados_pedidos_schema = EstadosPedidosSchema()
+multiple_estados_pedidos_schema = EstadosPedidosSchema(many=True)
 
 @estados_pedidos_bp.route('/', methods=['GET'])
 @swag_from({
@@ -29,7 +34,7 @@ estados_pedidos_bp = Blueprint('estados_pedidos', __name__)
 def get_estados_pedidos():
     """Obtener todos los estados de pedidos"""
     estados = EstadosPedidos.query.all()
-    return jsonify([estado.to_dict() for estado in estados]), 200
+    return jsonify(multiple_estados_pedidos_schema.dump(estados)), 200
 
 @estados_pedidos_bp.route('/', methods=['POST'])
 @swag_from({
@@ -67,10 +72,10 @@ def create_estado_pedido():
     """Crear un nuevo estado de pedido"""
     data = request.get_json()
     try:
-        estado = EstadosPedidos(nombre=data['nombre'])
+        estado = estados_pedidos_schema.load(data, session=db.session)
         db.session.add(estado)
         db.session.commit()
-        return jsonify(estado.to_dict()), 201
+        return jsonify(estados_pedidos_schema.dump(estado)), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
@@ -106,7 +111,7 @@ def create_estado_pedido():
 def get_estado_pedido(estado_pedido_id):
     """Obtener un estado de pedido por ID"""
     estado = EstadosPedidos.query.get_or_404(estado_pedido_id)
-    return jsonify(estado.to_dict()), 200
+    return jsonify(estados_pedidos_schema.dump(estado)), 200
 
 @estados_pedidos_bp.route('/<int:estado_pedido_id>', methods=['PUT'])
 @swag_from({
@@ -152,9 +157,9 @@ def update_estado_pedido(estado_pedido_id):
     estado = EstadosPedidos.query.get_or_404(estado_pedido_id)
     data = request.get_json()
     try:
-        estado.nombre = data['nombre']
+        estado = estados_pedidos_schema.load(data, instance=estado, session=db.session)
         db.session.commit()
-        return jsonify(estado.to_dict()), 200
+        return jsonify(estados_pedidos_schema.dump(estado)), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
