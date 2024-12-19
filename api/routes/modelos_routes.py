@@ -151,3 +151,71 @@ def get_modelos_por_producto(producto_id):
         } for modelo in modelos
     ]
     return jsonify(response), 200
+
+
+@modelos_bp.route('/', methods=['POST'])
+@swag_from({
+    'tags': ['Modelos'],
+    'summary': 'Crear un nuevo modelo',
+    'description': 'Crea un nuevo modelo asociado a un producto específico.',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'tiempo_estimado': {'type': 'string', 'example': '01:30:00'},
+                    'alto': {'type': 'string', 'example': '10.00'},
+                    'ancho': {'type': 'string', 'example': '5.00'},
+                    'largo': {'type': 'string', 'example': '7.00'},
+                    'stl': {'type': 'string', 'example': 'path/to/file.stl'},
+                    'stock': {'type': 'integer', 'example': 100},
+                    'producto_id': {'type': 'integer', 'example': 1}
+                },
+                'required': [
+                    'tiempo_estimado', 'alto', 'ancho', 'largo', 'stl', 'stock', 'producto_id'
+                ]
+            }
+        }
+    ],
+    'responses': {
+        201: {
+            'description': 'Modelo creado exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'modelo_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Modelo creado exitosamente'}
+                }
+            }
+        },
+        400: {'description': 'Datos inválidos en la solicitud'},
+        500: {'description': 'Error interno del servidor'}
+    }
+})
+def create_modelo():
+    """Crear un nuevo modelo asociado a un producto."""
+    data = request.get_json()
+
+    try:
+        # Validar que el producto exista
+        producto_id = data.get('producto_id')
+        if not producto_id:
+            return jsonify({"message": "El campo 'producto_id' es obligatorio"}), 400
+
+        # Crear el modelo
+        nuevo_modelo = modelo_schema.load(data, session=db.session)
+        db.session.add(nuevo_modelo)
+        db.session.commit()
+
+        # Respuesta exitosa
+        return jsonify({
+            "modelo_id": nuevo_modelo.modelo_id,
+            "message": "Modelo creado exitosamente"
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al crear el modelo", "error": str(e)}), 500
