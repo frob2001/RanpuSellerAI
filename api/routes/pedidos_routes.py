@@ -69,14 +69,14 @@ def get_todos_pedidos():
                 "producto_id": item.producto.producto_id,
                 "nombre": item.producto.nombre,
                 "cantidad": item.cantidad
-            } for item in pedido.productos_pedidos
+            } for item in (pedido.productos_pedidos or [])  # Aseguramos que sea iterable, devolviendo una lista vacía si es None
         ]
 
         pedido_dict = pedido.to_dict()
         pedido_dict["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
         pedido_dict["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
         pedido_dict["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-        pedido_dict["productos"] = productos_pedidos
+        pedido_dict["productos"] = productos_pedidos  # Incluimos la lista vacía si no hay productos
         response.append(pedido_dict)
 
     return jsonify(response), 200
@@ -147,13 +147,13 @@ def get_pedido_por_id(pedido_id):
             "producto_id": item.producto.producto_id,
             "nombre": item.producto.nombre,
             "cantidad": item.cantidad
-        } for item in pedido.productos_pedidos
+        } for item in (pedido.productos_pedidos or [])  # Aseguramos que sea iterable
     ]
 
     response = pedido.to_dict()
     response["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
     response["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
     response["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-    response["productos"] = productos_pedidos
+    response["productos"] = productos_pedidos  # Incluimos la lista vacía si no hay productos
 
     return jsonify(response), 200
