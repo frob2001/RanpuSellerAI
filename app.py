@@ -14,7 +14,7 @@ from api.database import init_db
 from api.swagger import init_swagger
 
 #API ROUTES
-from api.routes import usuarios_bp
+from api.routes import usuarios_bp, estados_pedidos_bp
 
 app = Flask(__name__)
 
@@ -171,6 +171,8 @@ app.register_blueprint(lithophane_bp)
 
 #Blueprints for APIs
 app.register_blueprint(usuarios_bp, url_prefix="/api")
+app.register_blueprint(estados_pedidos_bp, url_prefix="/api")
+
 
 # Página principal
 @app.route('/')
