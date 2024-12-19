@@ -170,8 +170,8 @@ def get_conversations(user_id):
 app.register_blueprint(lithophane_bp)
 
 #Blueprints for APIs
-app.register_blueprint(usuarios_bp, url_prefix="/api")
-app.register_blueprint(estados_pedidos_bp, url_prefix="/api")
+app.register_blueprint(usuarios_bp, url_prefix="/api/usuarios")
+app.register_blueprint(estados_pedidos_bp, url_prefix="/api/estados_pedidos")
 
 
 # Página principal
