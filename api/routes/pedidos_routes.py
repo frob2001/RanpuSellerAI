@@ -27,12 +27,43 @@ multiple_pedidos_schema = PedidosSchema(many=True)
                     'type': 'object',
                     'properties': {
                         'pedido_id': {'type': 'integer', 'example': 1},
-                        'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
-                        'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
-                        'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
-                        'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
-                        'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
-                        'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
+                        'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
+                        'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
+                        'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
+                        'estado_pedido': {
+                            'type': 'object',
+                            'properties': {
+                                'estado_pedido_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'Imprimiendo'}
+                            }
+                        },
+                        'direccion': {
+                            'type': 'object',
+                            'properties': {
+                                'direccion_id': {'type': 'integer', 'example': 1},
+                                'cedula': {'type': 'string', 'example': '1234567890'},
+                                'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                                'telefono': {'type': 'string', 'example': '+593999999999'},
+                                'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                                'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
+                                'ciudad': {'type': 'string', 'example': 'Springfield'},
+                                'provincia': {'type': 'string', 'example': 'Pichincha'},
+                                'numeracion': {'type': 'string', 'example': '123'},
+                                'referencia': {'type': 'string', 'example': 'Frente al parque'},
+                                'codigo_postal': {'type': 'string', 'example': '170123'}
+                            }
+                        },
+                        'impuesto': {
+                            'type': 'object',
+                            'properties': {
+                                'impuesto_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'IVA'},
+                                'porcentaje': {'type': 'string', 'example': '15.00'}
+                            }
+                        },
+                        'pago_id': {'type': 'string', 'example': 'PAY123'},
+                        'precio': {'type': 'string', 'example': '100.00'},
+                        'precio_final': {'type': 'string', 'example': '112.00'},
                         'productos': {
                             'type': 'array',
                             'items': {
@@ -55,32 +86,34 @@ def get_todos_pedidos():
     pedidos = Pedidos.query.all()
     response = []
     for pedido in pedidos:
-        # Obtener productos relacionados
-        productos_pedidos = ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
-        productos = [
+        productos_pedidos = [
             {
-                "producto_id": pp.producto.producto_id,
-                "nombre": pp.producto.nombre,
-                "cantidad": pp.cantidad
-            }
-            for pp in productos_pedidos
+                "producto_id": item.producto.producto_id,
+                "nombre": item.producto.nombre,
+                "cantidad": item.cantidad
+            } for item in ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
         ]
 
-        # Construir la respuesta del pedido
         pedido_dict = pedido.to_dict()
+        pedido_dict.pop("estado_pedido_id", None)
+        pedido_dict.pop("direccion_id", None)
+        pedido_dict.pop("impuesto_id", None)
+
         pedido_dict["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
         pedido_dict["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
         pedido_dict["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-        pedido_dict["productos"] = productos
+        pedido_dict["productos"] = productos_pedidos
+
         response.append(pedido_dict)
 
     return jsonify(response), 200
+
 
 @pedidos_bp.route('/<int:pedido_id>', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener un pedido por ID',
-    'description': 'Obtiene un pedido específico por su ID, incluyendo detalles de estado, dirección, impuesto y productos relacionados.',
+    'description': 'Obtiene un pedido específico, incluyendo detalles de estado, dirección, impuesto y productos relacionados.',
     'parameters': [
         {
             'name': 'pedido_id',
@@ -97,12 +130,43 @@ def get_todos_pedidos():
                 'type': 'object',
                 'properties': {
                     'pedido_id': {'type': 'integer', 'example': 1},
-                    'fecha_envio': {'type': 'string', 'example': '2024-12-19T14:30:00'},
-                    'fecha_entrega': {'type': 'string', 'example': '2024-12-22T10:00:00'},
-                    'fecha_pago': {'type': 'string', 'example': '2024-12-18T12:00:00'},
-                    'estado_pedido': {'type': 'object', 'example': {'estado_pedido_id': 1, 'nombre': 'Enviado'}},
-                    'direccion': {'type': 'object', 'example': {'direccion_id': 1, 'calle_principal': 'Av. Siempre Viva', 'ciudad': 'Springfield'}},
-                    'impuesto': {'type': 'object', 'example': {'impuesto_id': 1, 'nombre': 'IVA', 'porcentaje': 12.00}},
+                    'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
+                    'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
+                    'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
+                    'estado_pedido': {
+                        'type': 'object',
+                        'properties': {
+                            'estado_pedido_id': {'type': 'integer', 'example': 1},
+                            'nombre': {'type': 'string', 'example': 'Imprimiendo'}
+                        }
+                    },
+                    'direccion': {
+                        'type': 'object',
+                        'properties': {
+                            'direccion_id': {'type': 'integer', 'example': 1},
+                            'cedula': {'type': 'string', 'example': '1234567890'},
+                            'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                            'telefono': {'type': 'string', 'example': '+593999999999'},
+                            'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                            'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
+                            'ciudad': {'type': 'string', 'example': 'Springfield'},
+                            'provincia': {'type': 'string', 'example': 'Pichincha'},
+                            'numeracion': {'type': 'string', 'example': '123'},
+                            'referencia': {'type': 'string', 'example': 'Frente al parque'},
+                            'codigo_postal': {'type': 'string', 'example': '170123'}
+                        }
+                    },
+                    'impuesto': {
+                        'type': 'object',
+                        'properties': {
+                            'impuesto_id': {'type': 'integer', 'example': 1},
+                            'nombre': {'type': 'string', 'example': 'IVA'},
+                            'porcentaje': {'type': 'string', 'example': '15.00'}
+                        }
+                    },
+                    'pago_id': {'type': 'string', 'example': 'PAY123'},
+                    'precio': {'type': 'string', 'example': '100.00'},
+                    'precio_final': {'type': 'string', 'example': '112.00'},
                     'productos': {
                         'type': 'array',
                         'items': {
@@ -126,22 +190,24 @@ def get_pedido_por_id(pedido_id):
     if not pedido:
         return jsonify({"message": "Pedido no encontrado"}), 404
 
-    # Obtener productos relacionados
-    productos_pedidos = ProductosPedidos.query.filter_by(pedido_id=pedido_id).all()
-    productos = [
+    # Obtener productos relacionados del pedido
+    productos_pedidos = [
         {
-            "producto_id": pp.producto.producto_id,
-            "nombre": pp.producto.nombre,
-            "cantidad": pp.cantidad
-        }
-        for pp in productos_pedidos
+            "producto_id": item.producto.producto_id,
+            "nombre": item.producto.nombre,
+            "cantidad": item.cantidad
+        } for item in ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
     ]
 
-    # Construir la respuesta del pedido
+    # Construir la respuesta
     response = pedido.to_dict()
+    response.pop("estado_pedido_id", None)
+    response.pop("direccion_id", None)
+    response.pop("impuesto_id", None)
+
     response["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
     response["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
     response["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-    response["productos"] = productos
+    response["productos"] = productos_pedidos
 
     return jsonify(response), 200
