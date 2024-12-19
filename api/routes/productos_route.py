@@ -221,3 +221,107 @@ def get_producto_por_id(producto_id):
 
     return jsonify(response), 200
 
+@productos_bp.route('/', methods=['POST'])
+@swag_from({
+    'tags': ['Productos'],
+    'summary': 'Crear un nuevo producto',
+    'description': 'Crea un nuevo producto y, opcionalmente, puede agregar detalles en las tablas relacionadas (detalles_catalogo, detalles_lamparas_ranpu y detalles_productos_ia).',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'nombre': {'type': 'string', 'example': 'Lámpara Inteligente'},
+                    'descripcion': {'type': 'string', 'example': 'Lámpara con diseño moderno y conexión Wi-Fi'},
+                    'alto': {'type': 'string', 'example': '12.00'},
+                    'ancho': {'type': 'string', 'example': '6.00'},
+                    'largo': {'type': 'string', 'example': '9.00'},
+                    'gbl': {'type': 'string', 'example': 'path/to/file.gbl'},
+                    'precio': {'type': 'string', 'example': '29.99'},
+                    'categoria_producto_id': {'type': 'integer', 'example': 1},
+                    'detalles_catalogo': {'type': 'string', 'example': 'Lámpara incluida en catálogo'},
+                    'detalles_lamparas_ranpu': {'type': 'string', 'example': 'Detalles específicos de Ranpu'},
+                    'detalles_productos_ia': {'type': 'string', 'example': 'Detalles generados por IA'}
+                },
+                'required': ['nombre', 'descripcion', 'alto', 'ancho', 'largo', 'gbl', 'precio', 'categoria_producto_id']
+            }
+        }
+    ],
+    'responses': {
+        201: {
+            'description': 'Producto creado exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'example': 'Producto creado exitosamente'},
+                    'producto': {'type': 'object'}
+                }
+            }
+        },
+        400: {'description': 'Datos inválidos en la solicitud'}
+    }
+})
+def create_producto():
+    """Crear un producto y, opcionalmente, agregar detalles en tablas relacionadas."""
+    data = request.get_json()
+
+    # Validar campos obligatorios
+    required_fields = ['nombre', 'descripcion', 'alto', 'ancho', 'largo', 'gbl', 'precio', 'categoria_producto_id']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({"message": f"El campo '{field}' es obligatorio"}), 400
+
+    try:
+        # Crear producto
+        nuevo_producto = Productos(
+            nombre=data['nombre'],
+            descripcion=data['descripcion'],
+            alto=data['alto'],
+            ancho=data['ancho'],
+            largo=data['largo'],
+            gbl=data['gbl'],
+            precio=data['precio'],
+            categoria_producto_id=data['categoria_producto_id']
+        )
+        db.session.add(nuevo_producto)
+        db.session.flush()  # Obtener producto_id antes de commit
+
+        # Crear detalles opcionales
+        if 'detalles_catalogo' in data:
+            detalles_catalogo = DetallesCatalogo(
+                producto_id=nuevo_producto.producto_id,
+                detalles=data['detalles_catalogo']
+            )
+            db.session.add(detalles_catalogo)
+
+        if 'detalles_lamparas_ranpu' in data:
+            detalles_lamparas_ranpu = DetallesLamparasRanpu(
+                producto_id=nuevo_producto.producto_id,
+                detalles=data['detalles_lamparas_ranpu']
+            )
+            db.session.add(detalles_lamparas_ranpu)
+
+        if 'detalles_productos_ia' in data:
+            detalles_productos_ia = DetallesProductosIA(
+                producto_id=nuevo_producto.producto_id,
+                detalles=data['detalles_productos_ia']
+            )
+            db.session.add(detalles_productos_ia)
+
+        db.session.commit()
+
+        # Respuesta exitosa
+        response = nuevo_producto.to_dict()
+        response["categoria_producto"] = nuevo_producto.categoria_producto.to_dict() if nuevo_producto.categoria_producto else None
+        response["detalles_catalogo"] = data.get('detalles_catalogo')
+        response["detalles_lamparas_ranpu"] = data.get('detalles_lamparas_ranpu')
+        response["detalles_productos_ia"] = data.get('detalles_productos_ia')
+
+        return jsonify({"message": "Producto creado exitosamente", "producto": response}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al crear el producto", "error": str(e)}), 500
