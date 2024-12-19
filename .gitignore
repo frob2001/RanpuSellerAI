@@ -1,5 +1,6 @@
 # Virtual environment folder
 venv/
+venv/*
 
 # Python-specific ignores
 __pycache__/
