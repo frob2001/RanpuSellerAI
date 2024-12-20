@@ -25,7 +25,8 @@ multiple_impuestos_schema = ImpuestosSchema(many=True)
                     'properties': {
                         'impuesto_id': {'type': 'integer', 'example': 1},
                         'nombre': {'type': 'string', 'example': 'IVA'},
-                        'porcentaje': {'type': 'string', 'example': '12.00'}
+                        'porcentaje': {'type': 'string', 'example': '12.00'},
+                        'activo': {'type': 'boolean', 'example': True}
                     }
                 }
             }
@@ -51,7 +52,8 @@ def get_impuestos():
                 'type': 'object',
                 'properties': {
                     'nombre': {'type': 'string', 'example': 'IVA'},
-                    'porcentaje': {'type': 'string', 'example': '12.00'}
+                    'porcentaje': {'type': 'string', 'example': '12.00'},
+                    'activo': {'type': 'boolean', 'example': False}
                 }
             }
         }
@@ -64,7 +66,8 @@ def get_impuestos():
                 'properties': {
                     'impuesto_id': {'type': 'integer', 'example': 1},
                     'nombre': {'type': 'string', 'example': 'IVA'},
-                    'porcentaje': {'type': 'string', 'example': '12.00'}
+                    'porcentaje': {'type': 'string', 'example': '12.00'},
+                    'activo': {'type': 'boolean', 'example': False}
                 }
             }
         },
@@ -76,6 +79,9 @@ def create_impuesto():
     data = request.get_json()
     try:
         impuesto = impuestos_schema.load(data, session=db.session)
+        if data.get("activo"):
+            # Desactivar todos los impuestos antes de activar uno nuevo
+            Impuestos.query.update({"activo": False})
         db.session.add(impuesto)
         db.session.commit()
         return jsonify(impuestos_schema.dump(impuesto)), 201
@@ -138,7 +144,8 @@ def get_impuesto(impuesto_id):
                 'type': 'object',
                 'properties': {
                     'nombre': {'type': 'string', 'example': 'IVA'},
-                    'porcentaje': {'type': 'string', 'example': '14.00'}
+                    'porcentaje': {'type': 'string', 'example': '14.00'},
+                    'activo': {'type': 'boolean', 'example': True}
                 }
             }
         }
@@ -151,7 +158,8 @@ def get_impuesto(impuesto_id):
                 'properties': {
                     'impuesto_id': {'type': 'integer', 'example': 1},
                     'nombre': {'type': 'string', 'example': 'IVA'},
-                    'porcentaje': {'type': 'string', 'example': '14.00'}
+                    'porcentaje': {'type': 'string', 'example': '14.00'},
+                    'activo': {'type': 'boolean', 'example': True}
                 }
             }
         },
@@ -163,6 +171,9 @@ def update_impuesto(impuesto_id):
     impuesto = Impuestos.query.get_or_404(impuesto_id)
     data = request.get_json()
     try:
+        if data.get("activo"):
+            # Desactivar todos los impuestos antes de activar el actualizado
+            Impuestos.query.update({"activo": False})
         impuesto = impuestos_schema.load(data, instance=impuesto, session=db.session)
         db.session.commit()
         return jsonify(impuestos_schema.dump(impuesto)), 200
@@ -196,6 +207,52 @@ def delete_impuesto(impuesto_id):
         db.session.delete(impuesto)
         db.session.commit()
         return jsonify({"message": "Impuesto eliminado exitosamente"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 400
+    
+@impuestos_bp.route('/<int:impuesto_id>/activate', methods=['PATCH'])
+@swag_from({
+    'tags': ['Impuestos'],
+    'summary': 'Activar impuesto',
+    'description': 'Activa un impuesto y desactiva los demás, asegurando que solo un impuesto esté activo a la vez.',
+    'parameters': [
+        {
+            'name': 'impuesto_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del impuesto a activar'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Impuesto activado correctamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'impuesto_id': {'type': 'integer', 'example': 1},
+                    'nombre': {'type': 'string', 'example': 'IVA'},
+                    'porcentaje': {'type': 'string', 'example': '15.00'},
+                    'activo': {'type': 'boolean', 'example': True}
+                }
+            }
+        },
+        400: {'description': 'Error al activar impuesto'}
+    }
+})
+def activate_impuesto(impuesto_id):
+    """Activar un impuesto y desactivar los demás"""
+    impuesto = Impuestos.query.get_or_404(impuesto_id)
+    try:
+        # Desactivar todos los impuestos
+        Impuestos.query.update({"activo": False})
+
+        # Activar el impuesto seleccionado
+        impuesto.activo = True
+        db.session.commit()
+
+        return jsonify(impuestos_schema.dump(impuesto)), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
