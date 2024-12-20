@@ -1,4 +1,3 @@
-#PRIMERA PARTE
 from .usuarios import Usuarios
 from .pedidos_usuario import PedidosUsuario
 from .pedidos import Pedidos
@@ -13,15 +12,13 @@ from .detalles_catalogo import DetallesCatalogo
 from .detalles_lamparas_ranpu import DetallesLamparasRanpu
 from .detalles_productos_ia import DetallesProductosIA
 from .modelos import Modelos
+from .estados_impresoras import EstadosImpresoras
+from .categorias_filamentos import CategoriasFilamentos
+from .filamentos import Filamentos
+from .impresoras import Impresoras
+from .filamentos_compatibles import FilamentosCompatibles
 
-
-# from .categorias_filamentos import CategoriasFilamentos
-# from .estados_impresoras import EstadosImpresoras
-# from .filamentos import Filamentos
-# from .filamentos_compatibles import FilamentosCompatibles
 # from .impresion import Impresion
-# from .impresoras import Impresoras
-
 # from .modelos_impresion import ModelosImpresion
 
 

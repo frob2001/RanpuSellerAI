@@ -219,3 +219,137 @@ def create_modelo():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error al crear el modelo", "error": str(e)}), 500
+
+@modelos_bp.route('/<int:modelo_id>', methods=['PUT'])
+@swag_from({
+    'tags': ['Modelos'],
+    'summary': 'Actualizar un modelo existente',
+    'description': 'Actualiza los datos de un modelo existente, incluyendo sus dimensiones, tiempo estimado, stock y STL.',
+    'parameters': [
+        {
+            'name': 'modelo_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del modelo a actualizar'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'tiempo_estimado': {'type': 'string', 'example': '02:00:00'},
+                    'alto': {'type': 'string', 'example': '12.50'},
+                    'ancho': {'type': 'string', 'example': '8.00'},
+                    'largo': {'type': 'string', 'example': '10.00'},
+                    'stl': {'type': 'string', 'example': 'path/to/updated_model.stl'},
+                    'stock': {'type': 'integer', 'example': 50},
+                    'producto_id': {'type': 'integer', 'example': 1}
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Modelo actualizado exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'modelo_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Modelo actualizado exitosamente'}
+                }
+            }
+        },
+        404: {'description': 'Modelo no encontrado'},
+        400: {'description': 'Datos inválidos en la solicitud'},
+        500: {'description': 'Error interno del servidor'}
+    }
+})
+def update_modelo(modelo_id):
+    """Actualizar un modelo existente."""
+    modelo = Modelos.query.get(modelo_id)
+    if not modelo:
+        return jsonify({"message": "Modelo no encontrado"}), 404
+
+    data = request.get_json()
+
+    try:
+        # Validar y actualizar los campos
+        if 'tiempo_estimado' in data:
+            modelo.tiempo_estimado = data['tiempo_estimado']
+        if 'alto' in data:
+            modelo.alto = data['alto']
+        if 'ancho' in data:
+            modelo.ancho = data['ancho']
+        if 'largo' in data:
+            modelo.largo = data['largo']
+        if 'stl' in data:
+            modelo.stl = data['stl']
+        if 'stock' in data:
+            modelo.stock = data['stock']
+        if 'producto_id' in data:
+            modelo.producto_id = data['producto_id']
+
+        db.session.commit()
+
+        return jsonify({
+            "modelo_id": modelo.modelo_id,
+            "message": "Modelo actualizado exitosamente"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al actualizar el modelo", "error": str(e)}), 500
+
+@modelos_bp.route('/<int:modelo_id>', methods=['DELETE'])
+@swag_from({
+    'tags': ['Modelos'],
+    'summary': 'Eliminar un modelo existente',
+    'description': 'Elimina un modelo específico identificado por su ID.',
+    'parameters': [
+        {
+            'name': 'modelo_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del modelo a eliminar'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Modelo eliminado exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'modelo_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Modelo eliminado exitosamente'}
+                }
+            }
+        },
+        404: {'description': 'Modelo no encontrado'},
+        500: {'description': 'Error interno del servidor'}
+    }
+})
+def delete_modelo(modelo_id):
+    """Eliminar un modelo existente."""
+    # Validar existencia del modelo
+    modelo = Modelos.query.get(modelo_id)
+    if not modelo:
+        return jsonify({"message": "Modelo no encontrado"}), 404
+
+    try:
+        # Eliminar el modelo
+        db.session.delete(modelo)
+        db.session.commit()
+
+        # Respuesta exitosa
+        return jsonify({
+            "modelo_id": modelo_id,
+            "message": "Modelo eliminado exitosamente"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al eliminar el modelo", "error": str(e)}), 500
