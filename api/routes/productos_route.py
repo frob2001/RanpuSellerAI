@@ -522,6 +522,82 @@ def get_productos_por_ids():
 
     return jsonify(resultado), 200
 
+@productos_bp.route('/calculate_total', methods=['POST'])
+@swag_from({
+    'tags': ['Productos'],
+    'summary': 'Calcular el total de una transacción',
+    'description': 'Calcula el subtotal (productos multiplicados por su cantidad), agrega una tarifa de entrega fija y devuelve el total.',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'items': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'quantity': {'type': 'integer', 'example': 2}
+                            },
+                            'required': ['producto_id', 'quantity']
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Resumen de la transacción',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'Subtotal': {'type': 'number', 'example': 59.98},
+                    'DeliveryFee': {'type': 'number', 'example': 2.00},
+                    'Total': {'type': 'number', 'example': 61.98}
+                }
+            }
+        },
+        400: {'description': 'Solicitud inválida'},
+        404: {'description': 'Uno o más productos no encontrados'}
+    }
+})
+def calculate_total():
+    """Calcular el total de una transacción."""
+    data = request.get_json()
+    items = data.get('items', [])
+
+    if not items or not isinstance(items, list):
+        return jsonify({"message": "Debe proporcionar una lista válida de productos con cantidades en 'items'"}), 400
+
+    subtotal = 0
+    delivery_fee = 2.00
+
+    for item in items:
+        producto_id = item.get('producto_id')
+        quantity = item.get('quantity', 0)
+
+        if not producto_id or not isinstance(quantity, int) or quantity <= 0:
+            return jsonify({"message": f"ID de producto o cantidad inválida en el item: {item}"}), 400
+
+        producto = Productos.query.get(producto_id)
+        if not producto:
+            return jsonify({"message": f"Producto con ID {producto_id} no encontrado"}), 404
+
+        # Multiplica el precio por la cantidad y acumula en el subtotal
+        subtotal += float(producto.precio) * quantity
+
+    total = subtotal + delivery_fee
+
+    return jsonify({
+        "Subtotal": f"{subtotal:.2f}",
+        "DeliveryFee": f"{delivery_fee:.2f}",
+        "Total": f"{total:.2f}"
+    }), 200
 
 @productos_bp.route('/<int:producto_id>', methods=['PUT'])
 @swag_from({
