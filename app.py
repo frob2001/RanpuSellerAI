@@ -8,6 +8,7 @@ from services import (
     get_chatgpt_response,
     conversation_history
 )
+from flask_cors import CORS
 
 #API 
 from api.database import init_db
@@ -26,6 +27,9 @@ from api.routes import (
 )
 
 app = Flask(__name__)
+
+# Configuración de CORS
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 
 init_db(app)
 init_swagger(app)
