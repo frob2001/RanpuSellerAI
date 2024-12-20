@@ -113,7 +113,6 @@ def get_productos():
 
     return jsonify(resultado), 200
 
-
 @productos_bp.route('/<int:producto_id>', methods=['GET'])
 @swag_from({
     'tags': ['Productos'],
@@ -385,6 +384,137 @@ def create_producto():
         db.session.rollback()
         return jsonify({"message": "Error al crear el producto", "error": str(e)}), 500
 
+@productos_bp.route('/cart', methods=['POST'])
+@swag_from({
+    'tags': ['Productos'],
+    'summary': 'Obtener múltiples productos por sus IDs',
+    'description': 'Obtiene los detalles de múltiples productos en base a un arreglo de IDs proporcionado.',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'productIds': {
+                        'type': 'array',
+                        'items': {'type': 'integer'},
+                        'example': [1, 2, 3]
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Lista de productos',
+            'schema': {
+                'type': 'array',
+                'items': {
+                    'type': 'object',
+                    'properties': {
+                        'producto_id': {'type': 'integer', 'example': 1},
+                        'nombre': {'type': 'string', 'example': 'Lámpara Inteligente'},
+                        'descripcion': {'type': 'string', 'example': 'Lámpara con diseño moderno y conexión Wi-Fi'},
+                        'alto': {'type': 'string', 'example': '12.00'},
+                        'ancho': {'type': 'string', 'example': '6.00'},
+                        'largo': {'type': 'string', 'example': '9.00'},
+                        'gbl': {'type': 'string', 'example': 'path/to/file.gbl'},
+                        'precio': {'type': 'string', 'example': '29.99'},
+                        'categoria_producto': {
+                            'type': 'object',
+                            'properties': {
+                                'categoria_producto_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'Lámparas'}
+                            }
+                        },
+                        'detalles_catalogo': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'detalles': {'type': 'string', 'example': 'Lámpara incluida en catálogo'}
+                            }
+                        },
+                        'detalles_lamparas_ranpu': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'detalles': {'type': 'string', 'example': 'Detalles específicos de Ranpu'}
+                            }
+                        },
+                        'detalles_productos_ia': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'detalles': {'type': 'string', 'example': 'Detalles generados por IA'}
+                            }
+                        },
+                        'imagenes': {
+                            'type': 'array',
+                            'items': {
+                                'type': 'object',
+                                'properties': {
+                                    'imagen_producto_id': {'type': 'integer', 'example': 1},
+                                    'descripcion': {'type': 'string', 'example': 'Vista frontal'},
+                                    'ubicacion': {'type': 'string', 'example': '/images/product1_front.jpg'},
+                                    'producto_id': {'type': 'integer', 'example': 1}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        400: {'description': 'Solicitud inválida'},
+        404: {'description': 'Uno o más productos no encontrados'}
+    }
+})
+def get_productos_por_ids():
+    """Obtener múltiples productos por sus IDs."""
+    data = request.get_json()
+    product_ids = data.get('productIds', [])
+    
+    if not product_ids or not isinstance(product_ids, list):
+        return jsonify({"message": "Debe proporcionar una lista de IDs de productos válida en 'productIds'"}), 400
+
+    productos = Productos.query.filter(Productos.producto_id.in_(product_ids)).all()
+
+    if not productos:
+        return jsonify({"message": "No se encontraron productos para los IDs proporcionados"}), 404
+
+    resultado = []
+
+    for producto in productos:
+        detalles_catalogo = DetallesCatalogo.query.filter_by(producto_id=producto.producto_id).first()
+        detalles_lamparas = DetallesLamparasRanpu.query.filter_by(producto_id=producto.producto_id).first()
+        detalles_ia = DetallesProductosIA.query.filter_by(producto_id=producto.producto_id).first()
+
+        producto_dict = producto.to_dict()
+        producto_dict["categoria_producto"] = (
+            producto.categoria_producto.to_dict()
+            if producto.categoria_producto else {"categoria_producto_id": producto.categoria_producto_id, "nombre": None}
+        )
+        producto_dict["detalles_catalogo"] = (
+            {"producto_id": producto.producto_id, "detalles": detalles_catalogo.detalles}
+            if detalles_catalogo else {"producto_id": producto.producto_id, "detalles": None}
+        )
+        producto_dict["detalles_lamparas_ranpu"] = (
+            {"producto_id": producto.producto_id, "detalles": detalles_lamparas.detalles}
+            if detalles_lamparas else {"producto_id": producto.producto_id, "detalles": None}
+        )
+        producto_dict["detalles_productos_ia"] = (
+            {"producto_id": producto.producto_id, "detalles": detalles_ia.detalles}
+            if detalles_ia else {"producto_id": producto.producto_id, "detalles": None}
+        )
+        producto_dict["imagenes"] = [
+            imagen.to_dict() for imagen in producto.imagenes
+        ]
+
+        resultado.append(producto_dict)
+
+    return jsonify(resultado), 200
+
 @productos_bp.route('/<int:producto_id>', methods=['PUT'])
 @swag_from({
     'tags': ['Productos'],
@@ -533,7 +663,6 @@ def update_producto(producto_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error al actualizar el producto", "error": str(e)}), 500
-
 
 @productos_bp.route('/<int:producto_id>', methods=['DELETE'])
 @swag_from({
