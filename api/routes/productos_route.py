@@ -6,6 +6,7 @@ from ..models.detalles_catalogo import DetallesCatalogo
 from ..models.detalles_lamparas_ranpu import DetallesLamparasRanpu
 from ..models.detalles_productos_ia import DetallesProductosIA
 from ..models.imagenes_productos import ImagenesProductos
+from ..models.impuestos import Impuestos
 from ..database import db
 
 productos_bp = Blueprint('productos', __name__)
@@ -526,7 +527,7 @@ def get_productos_por_ids():
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Calcular el total de una transacción',
-    'description': 'Calcula el subtotal (productos multiplicados por su cantidad), agrega una tarifa de entrega fija y devuelve el total.',
+    'description': 'Calcula el subtotal (productos multiplicados por su cantidad), aplica el impuesto actual activo y luego agrega una tarifa de entrega fija.',
     'parameters': [
         {
             'name': 'body',
@@ -552,13 +553,15 @@ def get_productos_por_ids():
     ],
     'responses': {
         200: {
-            'description': 'Resumen de la transacción',
+            'description': 'Resumen de la transacción con impuesto aplicado',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'Subtotal': {'type': 'number', 'example': 59.98},
+                    'TaxValue': {'type': 'number', 'example': 15.00},
+                    'CalculatedTax': {'type': 'number', 'example': 8.997},
                     'DeliveryFee': {'type': 'number', 'example': 2.00},
-                    'Total': {'type': 'number', 'example': 61.98}
+                    'Total': {'type': 'number', 'example': 70.97}
                 }
             }
         },
@@ -567,12 +570,20 @@ def get_productos_por_ids():
     }
 })
 def calculate_total():
-    """Calcular el total de una transacción."""
+    """Calcular el total de una transacción, incluyendo impuestos y tarifa de envío."""
     data = request.get_json()
     items = data.get('items', [])
 
     if not items or not isinstance(items, list):
         return jsonify({"message": "Debe proporcionar una lista válida de productos con cantidades en 'items'"}), 400
+
+    # Retrieve the active tax
+    active_tax = Impuestos.query.filter_by(activo=True).first()
+    if not active_tax:
+        return jsonify({"message": "No hay ningún impuesto activo configurado"}), 400
+
+    tax_percentage = float(active_tax.porcentaje) / 100  # Convert to percentage
+    tax_value = active_tax.porcentaje
 
     subtotal = 0
     delivery_fee = 2.00
@@ -588,13 +599,19 @@ def calculate_total():
         if not producto:
             return jsonify({"message": f"Producto con ID {producto_id} no encontrado"}), 404
 
-        # Multiplica el precio por la cantidad y acumula en el subtotal
+        # Multiply price by quantity and accumulate in the subtotal
         subtotal += float(producto.precio) * quantity
 
-    total = subtotal + delivery_fee
+    # Calculate tax
+    calculated_tax = subtotal * tax_percentage
+
+    # Calculate total
+    total = subtotal + calculated_tax + delivery_fee
 
     return jsonify({
         "Subtotal": f"{subtotal:.2f}",
+        "TaxValue": f"{tax_value:.2f}",
+        "CalculatedTax": f"{calculated_tax:.2f}",
         "DeliveryFee": f"{delivery_fee:.2f}",
         "Total": f"{total:.2f}"
     }), 200
