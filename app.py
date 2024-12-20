@@ -26,8 +26,7 @@ from api.routes import (
     estados_impresoras_bp,
     categorias_filamentos_bp,
     filamentos_bp,
-    impresoras_bp,
-    filamentos_compatibles_bp
+    impresoras_bp
 )
 
 app = Flask(__name__)
@@ -48,7 +47,6 @@ app.register_blueprint(estados_impresoras_bp, url_prefix="/api/estados_impresora
 app.register_blueprint(categorias_filamentos_bp, url_prefix="/api/categorias_filamentos")
 app.register_blueprint(filamentos_bp, url_prefix="/api/filamentos")
 app.register_blueprint(impresoras_bp, url_prefix="/api/impresoras")
-app.register_blueprint(filamentos_compatibles_bp, url_prefix="/api/filamentos_compatibles")
 
 # Configuration in production mode
 app.config.from_object(config['production'])
