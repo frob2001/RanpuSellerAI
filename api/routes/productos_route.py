@@ -474,21 +474,28 @@ def get_productos_por_ids():
     """Obtener múltiples productos por sus IDs."""
     data = request.get_json()
     product_ids = data.get('productIds', [])
-    
+
     if not product_ids or not isinstance(product_ids, list):
         return jsonify({"message": "Debe proporcionar una lista de IDs de productos válida en 'productIds'"}), 400
 
+    # Query all products at once
     productos = Productos.query.filter(Productos.producto_id.in_(product_ids)).all()
 
     if not productos:
         return jsonify({"message": "No se encontraron productos para los IDs proporcionados"}), 404
 
+    # Map product IDs to allow duplicates in the result
+    productos_dict = {producto.producto_id: producto for producto in productos}
     resultado = []
 
-    for producto in productos:
-        detalles_catalogo = DetallesCatalogo.query.filter_by(producto_id=producto.producto_id).first()
-        detalles_lamparas = DetallesLamparasRanpu.query.filter_by(producto_id=producto.producto_id).first()
-        detalles_ia = DetallesProductosIA.query.filter_by(producto_id=producto.producto_id).first()
+    for product_id in product_ids:
+        producto = productos_dict.get(product_id)
+        if not producto:
+            continue
+
+        detalles_catalogo = DetallesCatalogo.query.filter_by(producto_id=product_id).first()
+        detalles_lamparas = DetallesLamparasRanpu.query.filter_by(producto_id=product_id).first()
+        detalles_ia = DetallesProductosIA.query.filter_by(producto_id=product_id).first()
 
         producto_dict = producto.to_dict()
         producto_dict["categoria_producto"] = (
@@ -496,16 +503,16 @@ def get_productos_por_ids():
             if producto.categoria_producto else {"categoria_producto_id": producto.categoria_producto_id, "nombre": None}
         )
         producto_dict["detalles_catalogo"] = (
-            {"producto_id": producto.producto_id, "detalles": detalles_catalogo.detalles}
-            if detalles_catalogo else {"producto_id": producto.producto_id, "detalles": None}
+            {"producto_id": product_id, "detalles": detalles_catalogo.detalles}
+            if detalles_catalogo else {"producto_id": product_id, "detalles": None}
         )
         producto_dict["detalles_lamparas_ranpu"] = (
-            {"producto_id": producto.producto_id, "detalles": detalles_lamparas.detalles}
-            if detalles_lamparas else {"producto_id": producto.producto_id, "detalles": None}
+            {"producto_id": product_id, "detalles": detalles_lamparas.detalles}
+            if detalles_lamparas else {"producto_id": product_id, "detalles": None}
         )
         producto_dict["detalles_productos_ia"] = (
-            {"producto_id": producto.producto_id, "detalles": detalles_ia.detalles}
-            if detalles_ia else {"producto_id": producto.producto_id, "detalles": None}
+            {"producto_id": product_id, "detalles": detalles_ia.detalles}
+            if detalles_ia else {"producto_id": product_id, "detalles": None}
         )
         producto_dict["imagenes"] = [
             imagen.to_dict() for imagen in producto.imagenes
@@ -514,6 +521,7 @@ def get_productos_por_ids():
         resultado.append(producto_dict)
 
     return jsonify(resultado), 200
+
 
 @productos_bp.route('/<int:producto_id>', methods=['PUT'])
 @swag_from({
