@@ -133,13 +133,6 @@
             <p>Tu privacidad es importante para nosotros. Puedes consultar nuestra 
                <a href="https://www.termsfeed.com/live/9c7d6edb-5a31-4a59-ac22-488d6030c072">Política de Privacidad</a>.</p>
         </section>
-
-        <section>
-            <h2>Contáctanos</h2>
-            <p>Si tienes alguna pregunta o quieres personalizar tu lámpara, no dudes en contactarnos en: 
-               <a href="mailto:ranpulitofania@gmail.com">ranpulitofania@gmail.com</a>
-            </p>
-        </section>
     </main>
 
     <footer>
@@ -149,7 +142,6 @@
     <!-- Swiper JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/6.4.15/swiper-bundle.min.js"></script>
 
-    <!-- Inicialización del carrusel -->
     <script>
         var swiper = new Swiper('.swiper-container', {
             loop: true,
@@ -181,12 +173,18 @@
             });
         };
 
+        function checkLoginState() {
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
+            });
+        }
+
         function statusChangeCallback(response) {
             if (response.status === 'connected') {
                 userId = response.authResponse.userID;
                 obtenerInstagramId();
-            } else {
-                userId = null;
+                document.getElementById('conversation-btn').style.display = 'inline-block';
+                document.getElementById('logout-btn').style.display = 'inline-block';
             }
         }
 
@@ -194,12 +192,6 @@
             FB.api('/me?fields=id,instagram_account', function(response) {
                 if (response.instagram_account) {
                     instagramId = response.instagram_account.id;
-                } else {
-                    FB.api('/me/accounts', {fields: 'instagram_business_account'}, function(resp) {
-                        if (resp.data && resp.data.length) {
-                            instagramId = resp.data[0].instagram_business_account?.id;
-                        }
-                    });
                 }
             });
         }
@@ -216,6 +208,8 @@
             FB.logout(function() {
                 userId = null;
                 instagramId = null;
+                document.getElementById('conversation-btn').style.display = 'none';
+                document.getElementById('logout-btn').style.display = 'none';
             });
         }
     </script>
