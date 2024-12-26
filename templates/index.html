@@ -92,7 +92,7 @@
         
         <!-- Botón de inicio de sesión de Facebook -->
         <fb:login-button 
-            scope="public_profile,email,instagram_basic,instagram_manage_messages" 
+            scope="public_profile,email,instagram_basic,pages_show_list" 
             onlogin="checkLoginState();">
         </fb:login-button>
 
@@ -131,7 +131,7 @@
         <section>
             <h2>Política de Privacidad</h2>
             <p>Tu privacidad es importante para nosotros. Puedes consultar nuestra 
-               <a href="https://www.termsfeed.com/live/9c7d6edb-5a31-4a59-ac22-488d6030c072">Política de Privacidad</a> para conocer más detalles.</p>
+               <a href="https://www.termsfeed.com/live/9c7d6edb-5a31-4a59-ac22-488d6030c072">Política de Privacidad</a>.</p>
         </section>
 
         <section>
@@ -163,56 +163,59 @@
         });
     </script>
 
-    <!-- Facebook SDK para iniciar sesión -->
+    <!-- Facebook SDK -->
     <script>
         let userId = null;
+        let instagramId = null;
 
         window.fbAsyncInit = function() {
             FB.init({
-                appId      : '1560936227863673',  // Reemplaza con tu App ID
+                appId      : '1560936227863673',
                 cookie     : true,
                 xfbml      : true,
                 version    : 'v18.0'  
             });
-            
-            FB.AppEvents.logPageView();   
 
             FB.getLoginStatus(function(response) {
                 statusChangeCallback(response);
             });
         };
 
-        (function(d, s, id){
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) {return;}
-            js = d.createElement(s); js.id = id;
-            js.src = "https://connect.facebook.net/en_US/sdk.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
-
         function statusChangeCallback(response) {
             if (response.status === 'connected') {
                 userId = response.authResponse.userID;
-                document.getElementById('conversation-btn').style.display = 'inline-block';
-                document.getElementById('logout-btn').style.display = 'inline-block';
+                obtenerInstagramId();
             } else {
                 userId = null;
-                document.getElementById('conversation-btn').style.display = 'none';
-                document.getElementById('logout-btn').style.display = 'none';
             }
         }
 
+        function obtenerInstagramId() {
+            FB.api('/me?fields=id,instagram_account', function(response) {
+                if (response.instagram_account) {
+                    instagramId = response.instagram_account.id;
+                } else {
+                    FB.api('/me/accounts', {fields: 'instagram_business_account'}, function(resp) {
+                        if (resp.data && resp.data.length) {
+                            instagramId = resp.data[0].instagram_business_account?.id;
+                        }
+                    });
+                }
+            });
+        }
+
         function verConversaciones() {
-            if (userId) {
-                window.location.href = `/conversations/${userId}`;
+            if (instagramId) {
+                window.location.href = `/conversations/${instagramId}`;
+            } else {
+                alert('No se encontró cuenta de Instagram.');
             }
         }
 
         function logout() {
-            FB.logout(function(response) {
+            FB.logout(function() {
                 userId = null;
-                document.getElementById('conversation-btn').style.display = 'none';
-                document.getElementById('logout-btn').style.display = 'none';
+                instagramId = null;
             });
         }
     </script>
