@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversación con el Usuario</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            font-family: 'Anton', sans-serif;
+            color: #333;
+            text-align: center;
+        }
+        .conversation {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .user-message {
+            font-weight: bold;
+            color: #007BFF;
+        }
+        .bot-message {
+            color: #333;
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Conversación con el Usuario: {{ user_id }}</h1>
+
+    {% if mensajes %}
+        <div class="conversation">
+            {% for mensaje in mensajes %}
+                {% if mensaje.role == 'user' %}
+                    <p class="user-message">👤 Usuario: {{ mensaje.content }}</p>
+                {% else %}
+                    <p class="bot-message">🤖 Ranpu: {{ mensaje.content }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No hay mensajes disponibles.</p>
+    {% endif %}
+
+    <a href="/">Volver al inicio</a>
+</body>
+</html>

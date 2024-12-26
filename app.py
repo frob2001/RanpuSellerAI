@@ -190,11 +190,20 @@ def webhook():
 def get_conversations(user_id):
     """
     Endpoint para obtener las conversaciones del usuario.
+    Devuelve JSON o una vista HTML dependiendo de la cabecera 'Accept'.
     """
     if user_id in conversation_history:
-        return jsonify({"user_id": user_id, "conversation": conversation_history[user_id]}), 200
+        # Si la solicitud acepta HTML, renderiza una plantilla
+        if request.accept_mimetypes['text/html']:
+            return render_template('conversacion_usuario.html', mensajes=conversation_history[user_id], user_id=user_id)
+        else:
+            # Devuelve JSON si no se solicita HTML
+            return jsonify({"user_id": user_id, "conversation": conversation_history[user_id]}), 200
     else:
+        if request.accept_mimetypes['text/html']:
+            return render_template('error.html', mensaje="No se encontraron conversaciones para este usuario.")
         return jsonify({"error": "No se encontraron conversaciones para este usuario."}), 404
+
 
 
 #Rutas para litofanias
