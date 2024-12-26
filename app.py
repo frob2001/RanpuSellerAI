@@ -1,5 +1,5 @@
 import requests
-from flask import Flask, request, render_template, jsonify, redirect, session
+from flask import Flask, request, render_template, jsonify
 import logging
 from config import config
 from routes import lithophane_bp
@@ -185,101 +185,24 @@ def webhook():
         logger.warning("Datos inválidos recibidos en el webhook.")
         return "Error: No se pudo procesar el webhook", 400
     
-# Configuración de Instagram (desde config.py o variables de entorno)
-INSTAGRAM_CLIENT_ID = '996064988988485'
-INSTAGRAM_CLIENT_SECRET = '4b6c06bbcc9f350a9dda641fd1a93974'
-REDIRECT_URI = 'https://ranpusellerai.onrender.com/auth/instagram/callback'
 
-# URLs de Instagram OAuth2
-INSTAGRAM_AUTH_URL = 'https://api.instagram.com/oauth/authorize'
-INSTAGRAM_TOKEN_URL = 'https://api.instagram.com/oauth/access_token'
-INSTAGRAM_GRAPH_API_URL = 'https://graph.instagram.com'
-
-### ---- 1. Endpoint para Iniciar el Login con Instagram ---- ###
-@app.route('/auth/instagram')
-def auth_instagram():
-    auth_url = (
-        f"{INSTAGRAM_AUTH_URL}"
-        f"?client_id={INSTAGRAM_CLIENT_ID}"
-        f"&redirect_uri={REDIRECT_URI}"
-        f"&scope=user_profile,user_media"
-        f"&response_type=code"
-    )
-    return redirect(auth_url)
-
-
-### ---- 2. Callback para Recibir el Código y Obtener el Token de Acceso ---- ###
-@app.route('/auth/instagram/callback')
-def instagram_callback():
-    code = request.args.get('code')
-    if not code:
-        return "Error: No se recibió el código de autorización.", 400
-
-    data = {
-        "client_id": INSTAGRAM_CLIENT_ID,
-        "client_secret": INSTAGRAM_CLIENT_SECRET,
-        "grant_type": "authorization_code",
-        "redirect_uri": REDIRECT_URI,
-        "code": code
-    }
-    try:
-        # Intercambiar el código por un token de acceso
-        response = requests.post(INSTAGRAM_TOKEN_URL, data=data)
-        response.raise_for_status()
-        access_data = response.json()
-
-        # Guardar token de acceso y usuario en sesión
-        session['instagram_access_token'] = access_data['access_token']
-        session['user_id'] = access_data['user_id']
-
-        logger.info("Inicio de sesión de Instagram exitoso.")
-        return redirect('/profile')  # Redirigir a perfil
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error durante la autenticación de Instagram: {e}")
-        return "Error al autenticar con Instagram.", 400
-
-
-### ---- 3. Perfil del Usuario (Con Token) ---- ###
-@app.route('/profile')
-def profile():
-    access_token = session.get('instagram_access_token')
-    user_id = session.get('user_id')
-
-    if not access_token:
-        return redirect('/auth/instagram')
-
-    # Obtener información básica del usuario
-    user_info_url = (
-        f"{INSTAGRAM_GRAPH_API_URL}/{user_id}"
-        f"?fields=id,username,account_type"
-        f"&access_token={access_token}"
-    )
-    response = requests.get(user_info_url)
-    user_info = response.json()
-
-    return render_template('profile.html', user=user_info)
-
-
-### ---- 4. Logout (Cerrar Sesión) ---- ###
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect('/')
-
-
-### ---- 5. Endpoint para Mostrar Conversaciones (Simulación) ---- ###
-@app.route('/conversations', methods=['GET'])
-def get_conversations():
-    access_token = session.get('instagram_access_token')
-    if not access_token:
-        return redirect('/auth/instagram')
-
-    # Simulación de conversaciones
-    conversaciones = [
-        {"from": "usuario1", "message": "Hola, ¿puedo personalizar una lámpara?"},
-        {"from": "usuario2", "message": "¿Tienen envíos internacionales?"}
-    ]
-    return render_template('conversaciones.html', conversaciones=conversaciones)
+@app.route('/conversations/<user_id>', methods=['GET'])
+def get_conversations(user_id):
+    """
+    Endpoint para obtener las conversaciones del usuario.
+    Devuelve JSON o una vista HTML dependiendo de la cabecera 'Accept'.
+    """
+    if user_id in conversation_history:
+        # Si la solicitud acepta HTML, renderiza una plantilla
+        if request.accept_mimetypes['text/html']:
+            return render_template('conversacion_usuario.html', mensajes=conversation_history[user_id], user_id=user_id)
+        else:
+            # Devuelve JSON si no se solicita HTML
+            return jsonify({"user_id": user_id, "conversation": conversation_history[user_id]}), 200
+    else:
+        if request.accept_mimetypes['text/html']:
+            return render_template('error.html', mensaje="No se encontraron conversaciones para este usuario.")
+        return jsonify({"error": "No se encontraron conversaciones para este usuario."}), 404
 
 
 #Rutas para litofanias
