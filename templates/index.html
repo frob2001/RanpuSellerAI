@@ -68,7 +68,7 @@
             height: auto;
         }
 
-        #conversation-btn {
+        #conversation-btn, #logout-btn {
             display: none;
             background-color: #007BFF;
             color: white;
@@ -77,9 +77,9 @@
             font-size: 18px;
             cursor: pointer;
             border-radius: 5px;
-            margin-top: 20px;
+            margin: 10px 5px;
         }
-        #conversation-btn:hover {
+        #conversation-btn:hover, #logout-btn:hover {
             background-color: #0056b3;
         }
     </style>
@@ -98,6 +98,9 @@
 
         <!-- Botón para ver conversaciones -->
         <button id="conversation-btn" onclick="verConversaciones()">Ver Mis Conversaciones</button>
+
+        <!-- Botón para cerrar sesión -->
+        <button id="logout-btn" onclick="logout()">Cerrar Sesión</button>
     </header>
 
     <main>
@@ -165,8 +168,11 @@
             if (response.status === 'connected') {
                 userId = response.authResponse.userID;
                 document.getElementById('conversation-btn').style.display = 'inline-block';
+                document.getElementById('logout-btn').style.display = 'inline-block';
             } else {
+                userId = null;
                 document.getElementById('conversation-btn').style.display = 'none';
+                document.getElementById('logout-btn').style.display = 'none';
             }
         }
 
@@ -180,6 +186,15 @@
             if (userId) {
                 window.location.href = `/conversations/${userId}`;
             }
+        }
+
+        function logout() {
+            FB.logout(function(response) {
+                userId = null;
+                document.getElementById('conversation-btn').style.display = 'none';
+                document.getElementById('logout-btn').style.display = 'none';
+                console.log('Usuario desconectado.');
+            });
         }
     </script>
 
