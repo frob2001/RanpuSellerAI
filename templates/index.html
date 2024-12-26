@@ -74,6 +74,11 @@
     <header>
         <h1>Ranpu</h1>
         <p>Ilumina tus recuerdos con nuestras lámparas personalizadas</p>
+            <!-- Botón de inicio de sesión de Facebook -->
+        <fb:login-button 
+            scope="public_profile,email,instagram_basic,instagram_manage_messages" 
+            onlogin="checkLoginState();">
+        </fb:login-button>
     </header>
 
     <main>
@@ -174,12 +179,6 @@
             }
         }
     </script>
-
-    <!-- Botón de inicio de sesión de Facebook -->
-    <fb:login-button 
-      scope="public_profile,email,instagram_basic,instagram_manage_messages" 
-      onlogin="checkLoginState();">
-    </fb:login-button>
 
     <script>
       function checkLoginState() {
