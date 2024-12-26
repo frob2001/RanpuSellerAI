@@ -51,7 +51,6 @@
             text-decoration: none;
         }
 
-        /* Swiper Styles */
         .swiper-container {
             width: 80%;
             height: 400px;
@@ -96,9 +95,7 @@
                     <div class="swiper-slide"><img src="{{ url_for('static', filename='images/2.png') }}" alt="Lámpara 2"></div>
                     <div class="swiper-slide"><img src="{{ url_for('static', filename='images/3.png') }}" alt="Lámpara 3"></div>
                 </div>
-                <!-- Paginación -->
                 <div class="swiper-pagination"></div>
-                <!-- Botones de navegación -->
                 <div class="swiper-button-prev"></div>
                 <div class="swiper-button-next"></div>
             </div>
@@ -106,7 +103,8 @@
 
         <section>
             <h2>Política de Privacidad</h2>
-            <p>Tu privacidad es importante para nosotros. Puedes consultar nuestra <a href="https://www.termsfeed.com/live/9c7d6edb-5a31-4a59-ac22-488d6030c072">Política de Privacidad</a> para conocer más detalles.</p>
+            <p>Tu privacidad es importante para nosotros. Consulta nuestra 
+               <a href="{{ url_for('privacidad') }}">Política de Privacidad</a> para más detalles.</p>
         </section>
 
         <section>
@@ -116,6 +114,10 @@
             </p>
         </section>
     </main>
+
+    <footer>
+        <p>&copy; 2024 Ranpu Lámparas - Todos los derechos reservados</p>
+    </footer>
 
     <!-- Swiper JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/6.4.15/swiper-bundle.min.js"></script>
@@ -132,6 +134,59 @@
                 prevEl: '.swiper-button-prev',
             },
         });
+    </script>
+
+    <!-- Facebook SDK para iniciar sesión -->
+    <script>
+        window.fbAsyncInit = function() {
+          FB.init({
+            appId      : '1560936227863673',  // Reemplaza con tu App ID
+            cookie     : true,
+            xfbml      : true,
+            version    : 'v18.0'  // Usa la versión actual de la API
+          });
+            
+          FB.AppEvents.logPageView();   
+
+          // Verificar el estado de inicio de sesión
+          FB.getLoginStatus(function(response) {
+              statusChangeCallback(response);
+          });
+        };
+      
+        (function(d, s, id){
+           var js, fjs = d.getElementsByTagName(s)[0];
+           if (d.getElementById(id)) {return;}
+           js = d.createElement(s); js.id = id;
+           js.src = "https://connect.facebook.net/en_US/sdk.js";
+           fjs.parentNode.insertBefore(js, fjs);
+         }(document, 'script', 'facebook-jssdk'));
+
+        // Manejar el estado del usuario
+        function statusChangeCallback(response) {
+            if (response.status === 'connected') {
+                console.log('Usuario conectado.');
+                console.log(response.authResponse);
+            } else if (response.status === 'not_authorized') {
+                console.log('El usuario está conectado a Facebook pero no ha autorizado la app.');
+            } else {
+                console.log('El usuario no está conectado a Facebook.');
+            }
+        }
+    </script>
+
+    <!-- Botón de inicio de sesión de Facebook -->
+    <fb:login-button 
+      scope="public_profile,email,instagram_basic,instagram_manage_messages" 
+      onlogin="checkLoginState();">
+    </fb:login-button>
+
+    <script>
+      function checkLoginState() {
+        FB.getLoginStatus(function(response) {
+          statusChangeCallback(response);
+        });
+      }
     </script>
 
 </body>
