@@ -190,6 +190,13 @@
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'facebook-jssdk'));
 
+        // Actualiza inmediatamente después del login
+        function checkLoginState() {
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
+            });
+        }
+
         function statusChangeCallback(response) {
             if (response.status === 'connected') {
                 userId = response.authResponse.userID;
@@ -211,8 +218,7 @@
         function logout() {
             FB.logout(function(response) {
                 userId = null;
-                document.getElementById('conversation-btn').style.display = 'none';
-                document.getElementById('logout-btn').style.display = 'none';
+                statusChangeCallback(response);
             });
         }
     </script>
