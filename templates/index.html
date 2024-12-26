@@ -90,11 +90,14 @@
         <h1>Ranpu</h1>
         <p>Ilumina tus recuerdos con nuestras lámparas personalizadas</p>
         
-        <!-- Botón de inicio de sesión de Facebook -->
-        <fb:login-button 
-            scope="public_profile,email,instagram_basic,instagram_manage_messages" 
-            onlogin="checkLoginState();">
-        </fb:login-button>
+        <!-- Botón de inicio de sesión de Instagram -->
+        <a href="https://api.instagram.com/oauth/authorize
+        ?client_id=996064988988485
+        &redirect_uri=https://ranpusellerai.onrender.com/auth/instagram/callback
+        &scope=user_profile,user_media
+        &response_type=code">
+            <button class="login-btn" style="background-color:#E4405F;">Iniciar Sesión con Instagram</button>
+        </a>
 
         <!-- Botón para ver conversaciones -->
         <button id="conversation-btn" onclick="verConversaciones()">Ver Mis Conversaciones</button>
@@ -161,65 +164,31 @@
                 prevEl: '.swiper-button-prev',
             },
         });
-    </script>
 
-    <!-- Facebook SDK para iniciar sesión -->
-    <script>
-        let userId = null;
+        let accessToken = null;
 
-        window.fbAsyncInit = function() {
-            FB.init({
-                appId      : '1560936227863673',  // Reemplaza con tu App ID
-                cookie     : true,
-                xfbml      : true,
-                version    : 'v18.0'  
-            });
-            
-            FB.AppEvents.logPageView();   
-
-            FB.getLoginStatus(function(response) {
-                statusChangeCallback(response);
-            });
-        };
-
-        (function(d, s, id){
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) {return;}
-            js = d.createElement(s); js.id = id;
-            js.src = "https://connect.facebook.net/en_US/sdk.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
-
-        // Actualiza inmediatamente después del login
-        function checkLoginState() {
-            FB.getLoginStatus(function(response) {
-                statusChangeCallback(response);
-            });
+        // Muestra botones después del login
+        function showButtons(token) {
+            accessToken = token;
+            document.getElementById('conversation-btn').style.display = 'inline-block';
+            document.getElementById('logout-btn').style.display = 'inline-block';
         }
 
-        function statusChangeCallback(response) {
-            if (response.status === 'connected') {
-                userId = response.authResponse.userID;
-                document.getElementById('conversation-btn').style.display = 'inline-block';
-                document.getElementById('logout-btn').style.display = 'inline-block';
-            } else {
-                userId = null;
-                document.getElementById('conversation-btn').style.display = 'none';
-                document.getElementById('logout-btn').style.display = 'none';
-            }
-        }
-
+        // Redirige a conversaciones
         function verConversaciones() {
-            if (userId) {
-                window.location.href = `/conversations/${userId}`;
+            if (accessToken) {
+                window.location.href = `/conversations?access_token=${accessToken}`;
+            } else {
+                alert('Debes iniciar sesión primero.');
             }
         }
 
+        // Logout
         function logout() {
-            FB.logout(function(response) {
-                userId = null;
-                statusChangeCallback(response);
-            });
+            accessToken = null;
+            document.getElementById('conversation-btn').style.display = 'none';
+            document.getElementById('logout-btn').style.display = 'none';
+            alert('Sesión cerrada.');
         }
     </script>
 
