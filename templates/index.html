@@ -22,11 +22,12 @@
         header {
             background-color: #000;
             color: #fff;
-            padding: 20px 0;
+            padding: 10px 0;
             text-align: center;
         }
         header h1 {
             font-family: 'Anton', sans-serif;
+            color: #ffffff;
             font-size: 50px;
             margin: 0;
         }
@@ -41,26 +42,33 @@
             color: #fff;
             text-align: center;
             padding: 10px 0;
+            position: fixed;
             width: 100%;
             bottom: 0;
-            position: relative;
         }
         a {
             color: #007BFF;
             text-decoration: none;
         }
+
         .swiper-container {
             width: 80%;
             height: 400px;
             margin: 0 auto;
             padding-top: 30px;
         }
+        .swiper-slide {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         .swiper-slide img {
             width: 100%;
             max-width: 500px;
             height: auto;
         }
-        #conversation-btn, #logout-btn {
+
+        #logout-btn {
             display: none;
             background-color: #007BFF;
             color: white;
@@ -69,9 +77,9 @@
             font-size: 18px;
             cursor: pointer;
             border-radius: 5px;
-            margin: 10px 5px;
+            margin: 20px 5px;
         }
-        #conversation-btn:hover, #logout-btn:hover {
+        #logout-btn:hover {
             background-color: #0056b3;
         }
     </style>
@@ -85,19 +93,49 @@
         <!-- Botón de inicio de sesión de Facebook -->
         <div id="fb-root"></div>
         <fb:login-button 
-            scope="public_profile,email,instagram_basic,pages_show_list" 
+            scope="public_profile,email,instagram_basic,instagram_manage_messages" 
             onlogin="checkLoginState();">
         </fb:login-button>
 
-        <button id="conversation-btn" onclick="verConversaciones()">Ver Mis Conversaciones</button>
+        <!-- Botón para cerrar sesión -->
         <button id="logout-btn" onclick="logout()">Cerrar Sesión</button>
     </header>
 
     <main>
         <section>
             <h2>Sobre Nosotros</h2>
-            <p>Ranpu Lámparas crea lámparas personalizadas mediante impresión 3D. 
-               Productos biodegradables con envíos en Ecuador.</p>
+            <p>Ranpu Lámparas es una empresa especializada en la creación de lámparas personalizadas mediante impresión 3D. 
+               Nuestros productos son biodegradables y ofrecemos envíos a nivel nacional en Ecuador.</p>
+        </section>
+
+        <section>
+            <h2>Nuestros Productos</h2>
+            <p>Explora nuestra colección de lámparas personalizadas hechas con tus fotos favoritas. Perfectas para regalos 
+               y decoración.</p>
+
+            <!-- Carrusel de Imágenes -->
+            <div class="swiper-container">
+                <div class="swiper-wrapper">
+                    <div class="swiper-slide"><img src="{{ url_for('static', filename='images/1.png') }}" alt="Lámpara 1"></div>
+                    <div class="swiper-slide"><img src="{{ url_for('static', filename='images/2.png') }}" alt="Lámpara 2"></div>
+                    <div class="swiper-slide"><img src="{{ url_for('static', filename='images/3.png') }}" alt="Lámpara 3"></div>
+                </div>
+                <div class="swiper-pagination"></div>
+                <div class="swiper-button-prev"></div>
+                <div class="swiper-button-next"></div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Política de Privacidad</h2>
+            <p>Tu privacidad es importante para nosotros. Puedes consultar nuestra <a href="https://www.termsfeed.com/live/9c7d6edb-5a31-4a59-ac22-488d6030c072">Política de Privacidad</a>.</p>
+        </section>
+
+        <section>
+            <h2>Contáctanos</h2>
+            <p>Si tienes alguna pregunta o quieres personalizar tu lámpara, contáctanos en: 
+               <a href="mailto:ranpulitofania@gmail.com">ranpulitofania@gmail.com</a>
+            </p>
         </section>
     </main>
 
@@ -107,6 +145,8 @@
 
     <!-- Swiper JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/6.4.15/swiper-bundle.min.js"></script>
+
+    <!-- Inicialización del carrusel -->
     <script>
         var swiper = new Swiper('.swiper-container', {
             loop: true,
@@ -122,12 +162,9 @@
 
     <!-- Facebook SDK -->
     <script>
-        let userId = null;
-        let instagramId = null;
-
         window.fbAsyncInit = function() {
             FB.init({
-                appId      : '1560936227863673',  // Tu App ID de Facebook
+                appId      : '1560936227863673',  // Reemplaza con tu App ID de Facebook
                 cookie     : true,
                 xfbml      : true,
                 version    : 'v18.0'
@@ -138,7 +175,7 @@
             });
         };
 
-        // Cargar el SDK de Facebook de forma asíncrona
+        // Cargar el SDK de Facebook
         (function(d, s, id) {
             var js, fjs = d.getElementsByTagName(s)[0];
             if (d.getElementById(id)) return;
@@ -148,57 +185,22 @@
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'facebook-jssdk'));
 
-        // Verifica el estado de inicio de sesión
         function checkLoginState() {
             FB.getLoginStatus(function(response) {
                 statusChangeCallback(response);
             });
         }
 
-        // Callback para manejar el estado de sesión
         function statusChangeCallback(response) {
             if (response.status === 'connected') {
-                userId = response.authResponse.userID;
-                obtenerInstagramId();
-                document.getElementById('conversation-btn').style.display = 'inline-block';
                 document.getElementById('logout-btn').style.display = 'inline-block';
             } else {
-                userId = null;
-                document.getElementById('conversation-btn').style.display = 'none';
                 document.getElementById('logout-btn').style.display = 'none';
             }
         }
 
-        // Obtener ID de cuenta de Instagram (personal o empresarial)
-        function obtenerInstagramId() {
-            FB.api('/me?fields=id,instagram_account', function(response) {
-                if (response.instagram_account) {
-                    instagramId = response.instagram_account.id;
-                } else {
-                    FB.api('/me/accounts', {fields: 'instagram_business_account'}, function(resp) {
-                        if (resp.data && resp.data.length) {
-                            instagramId = resp.data[0].instagram_business_account?.id;
-                        }
-                    });
-                }
-            });
-        }
-
-        // Ver conversaciones
-        function verConversaciones() {
-            if (instagramId) {
-                window.location.href = `/conversations/${instagramId}`;
-            } else {
-                alert('No se encontró cuenta de Instagram vinculada.');
-            }
-        }
-
-        // Cerrar sesión
         function logout() {
-            FB.logout(function() {
-                userId = null;
-                instagramId = null;
-                document.getElementById('conversation-btn').style.display = 'none';
+            FB.logout(function(response) {
                 document.getElementById('logout-btn').style.display = 'none';
             });
         }
