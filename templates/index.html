@@ -127,6 +127,19 @@
                 <div class="swiper-button-next"></div>
             </div>
         </section>
+
+        <section>
+            <h2>Política de Privacidad</h2>
+            <p>Tu privacidad es importante para nosotros. Puedes consultar nuestra 
+               <a href="https://www.termsfeed.com/live/9c7d6edb-5a31-4a59-ac22-488d6030c072">Política de Privacidad</a> para conocer más detalles.</p>
+        </section>
+
+        <section>
+            <h2>Contáctanos</h2>
+            <p>Si tienes alguna pregunta o quieres personalizar tu lámpara, no dudes en contactarnos en: 
+               <a href="mailto:ranpulitofania@gmail.com">ranpulitofania@gmail.com</a>
+            </p>
+        </section>
     </main>
 
     <footer>
@@ -163,6 +176,7 @@
             });
             
             FB.AppEvents.logPageView();   
+
             FB.getLoginStatus(function(response) {
                 statusChangeCallback(response);
             });
@@ -188,12 +202,6 @@
             }
         }
 
-        function checkLoginState() {
-            FB.getLoginStatus(function(response) {
-                statusChangeCallback(response);
-            });
-        }
-
         function verConversaciones() {
             if (userId) {
                 window.location.href = `/conversations/${userId}`;
@@ -203,7 +211,8 @@
         function logout() {
             FB.logout(function(response) {
                 userId = null;
-                statusChangeCallback(response);
+                document.getElementById('conversation-btn').style.display = 'none';
+                document.getElementById('logout-btn').style.display = 'none';
             });
         }
     </script>
