@@ -8,6 +8,7 @@
     <!-- Google Fonts - Anton -->
     <link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 
+    <!-- Swiper CSS para el carrusel -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/6.4.15/swiper-bundle.min.css"/>
 
     <style>
@@ -26,6 +27,7 @@
         }
         header h1 {
             font-family: 'Anton', sans-serif;
+            color: #ffffff;
             font-size: 50px;
             margin: 0;
         }
@@ -40,13 +42,15 @@
             color: #fff;
             text-align: center;
             padding: 10px 0;
-            position: relative;
             width: 100%;
+            bottom: 0;
+            position: relative;
         }
         a {
             color: #007BFF;
             text-decoration: none;
         }
+
         .swiper-container {
             width: 80%;
             height: 400px;
@@ -111,6 +115,7 @@
             <p>Explora nuestra colección de lámparas personalizadas hechas con tus fotos favoritas. Perfectas para regalos 
                y decoración.</p>
 
+            <!-- Carrusel de Imágenes -->
             <div class="swiper-container">
                 <div class="swiper-wrapper">
                     <div class="swiper-slide"><img src="{{ url_for('static', filename='images/1.png') }}" alt="Lámpara 1"></div>
@@ -130,6 +135,8 @@
 
     <!-- Swiper JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/6.4.15/swiper-bundle.min.js"></script>
+
+    <!-- Inicialización del carrusel -->
     <script>
         var swiper = new Swiper('.swiper-container', {
             loop: true,
@@ -146,14 +153,13 @@
     <!-- Facebook SDK para iniciar sesión -->
     <script>
         let userId = null;
-        let igUserId = null;
 
         window.fbAsyncInit = function() {
             FB.init({
                 appId      : '1560936227863673',  // Reemplaza con tu App ID
                 cookie     : true,
                 xfbml      : true,
-                version    : 'v18.0'
+                version    : 'v18.0'  
             });
             
             FB.AppEvents.logPageView();   
@@ -173,7 +179,6 @@
         function statusChangeCallback(response) {
             if (response.status === 'connected') {
                 userId = response.authResponse.userID;
-                obtenerInstagramId();
                 document.getElementById('conversation-btn').style.display = 'inline-block';
                 document.getElementById('logout-btn').style.display = 'inline-block';
             } else {
@@ -183,35 +188,21 @@
             }
         }
 
-        function obtenerInstagramId() {
-            FB.api('/me/accounts', 'GET', { access_token: FB.getAuthResponse().accessToken }, function(response) {
-                if (response && !response.error) {
-                    response.data.forEach(account => {
-                        FB.api(`/${account.id}?fields=instagram_business_account`, function(instagramResponse) {
-                            if (instagramResponse.instagram_business_account) {
-                                igUserId = instagramResponse.instagram_business_account.id;
-                                console.log("Instagram ID: " + igUserId);
-                            } else {
-                                console.log('No hay cuenta de Instagram vinculada.');
-                            }
-                        });
-                    });
-                }
+        function checkLoginState() {
+            FB.getLoginStatus(function(response) {
+                statusChangeCallback(response);
             });
         }
 
         function verConversaciones() {
-            if (igUserId) {
-                window.location.href = `/conversations/${igUserId}`;
-            } else {
-                alert('No hay cuenta de Instagram vinculada.');
+            if (userId) {
+                window.location.href = `/conversations/${userId}`;
             }
         }
 
         function logout() {
             FB.logout(function(response) {
                 userId = null;
-                igUserId = null;
                 statusChangeCallback(response);
             });
         }
