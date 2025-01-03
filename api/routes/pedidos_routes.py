@@ -118,7 +118,6 @@ def get_todos_pedidos():
 
     return jsonify(response), 200
 
-
 @pedidos_bp.route('/<int:pedido_id>', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],

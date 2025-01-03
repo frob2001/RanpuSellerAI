@@ -14,6 +14,8 @@ class Pedidos(db.Model):
     precio_final = db.Column(db.Numeric(10, 2), nullable=False)
     pago_id = db.Column(db.String(1000), nullable=False)
     temporal_cart_id = db.Column(db.String(100), nullable=False)
+    detalles_pago = db.Column(db.JSON, nullable=True)              
+    ingreso_neto = db.Column(db.Numeric(10, 2), nullable=True) 
 
     estado_pedido = db.relationship('EstadosPedidos', backref=db.backref('pedidos', lazy=True))
     direcciones = db.relationship('Direcciones', backref=db.backref('pedidos', lazy=True))
@@ -31,5 +33,7 @@ class Pedidos(db.Model):
             "impuesto_id": self.impuesto_id,
             "precio_final": str(self.precio_final),
             "pago_id": self.pago_id,
-            "temporal_cart_id": self.temporal_cart_id
+            "temporal_cart_id": self.temporal_cart_id,
+            "detalles_pago": self.detalles_pago if self.detalles_pago else None, 
+            "ingreso_neto": str(self.ingreso_neto) if self.ingreso_neto else None
         }

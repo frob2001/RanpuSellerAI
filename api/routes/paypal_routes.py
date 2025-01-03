@@ -3,6 +3,9 @@ import os
 import json
 import base64
 import requests
+import pytz
+from dateutil.parser import isoparse
+from datetime import datetime
 from flask import Blueprint, request, jsonify, redirect
 from paypalserversdk.models.amount_with_breakdown import AmountWithBreakdown
 from paypalserversdk.models.checkout_payment_intent import CheckoutPaymentIntent
@@ -10,6 +13,9 @@ from paypalserversdk.models.order_request import OrderRequest
 from paypalserversdk.models.purchase_unit_request import PurchaseUnitRequest
 from api.models.productos import Productos
 from api.models.impuestos import Impuestos
+from api.models.pedidos_usuario import PedidosUsuario
+from api.models.pedidos import Pedidos
+from api.models.usuarios import Usuarios
 from firebase_admin import db as firebase_db  # Firebase Admin SDK initialized
 from api.database import db
 
@@ -226,37 +232,102 @@ def capture_redirect():
 # =============================================================================
 
 @paypal_bp.route("/orders/<order_id>/capture", methods=["POST"])
+@paypal_bp.route("/orders/<order_id>/capture", methods=["POST"])
 def capture_order(order_id):
     """
-    This is the manual programmatic capture endpoint.
-    It no longer uses the old 'orders_controller', 
-    and instead does a direct call to PayPal's /v2/checkout/orders/<order_id>/capture.
+    Manual capture endpoint with 'all or nothing' behavior:
+      - Capture PayPal order
+      - Delete cart in Firebase
+      - Update pedido in SQL DB
+    If anything fails, the database changes are rolled back and no partial commit occurs.
     """
     logger.info(f"Capturing PayPal order {order_id} via direct REST call...")
     logger.info(f"RAW request.data: {request.data}")
     logger.info(f"RAW request.get_json(silent=True): {request.get_json(silent=True)}")
 
     try:
-        # 1) Capture the order directly
-        captured_data = capture_order_official(order_id)
-        logger.info(f"Order {order_id} captured successfully. Data: {captured_data}")
+        # We start a DB transaction here.
+        # Any Exception raised within this 'with' block will cause a rollback.
+        with db.session.begin():
+            # 1) Capture the order directly
+            captured_data = capture_order_official(order_id)
+            logger.info(f"Order {order_id} captured successfully. Data: {captured_data}")
 
-        # 2) Update Firebase with payment status
-        request_body = request.get_json() or {}
-        user_id = request_body.get('userId')
+            # If PayPal says it's not completed, raise an error to roll back
+            if captured_data.get('status') != 'COMPLETED':
+                raise ValueError("Order not completed by PayPal")
 
-        if user_id:
+            # 2) Remove the cart from Firebase
+            request_body = request.get_json() or {}
+            user_id = request_body.get('userId')
+            if not user_id:
+                raise ValueError("Missing userId in request body")
+
             cart_ref = firebase_db.reference(f'/carts/{user_id}')
-            cart_ref.update({"status": "paid"})
 
-        # 3) Return capture response
-        return jsonify(captured_data), 200
+            # If cart_ref.delete() fails (network, auth, etc.), it will raise an exception
+            # which triggers the DB rollback
+            cart_ref.delete()
+
+            # 3) Find the user's 'pending' pedido
+            user = Usuarios.query.filter_by(firebase_uid=user_id).first()
+            if not user:
+                raise ValueError("User not found for firebase_uid={}".format(user_id))
+
+            usuario_id = user.usuario_id
+            pedidos_usuario = PedidosUsuario.query.filter_by(usuario_id=usuario_id).all()
+            pedido_ids = [p.pedido_id for p in pedidos_usuario]
+
+            pedido = Pedidos.query.filter(
+                Pedidos.pedido_id.in_(pedido_ids),
+                Pedidos.estado_pedido_id == 8  # 'Esperando pago'
+            ).first()
+
+            if not pedido:
+                raise ValueError(f"No pending pedido (estado=8) found for user_id={user_id}")
+
+            # Extract capture details from the PayPal response
+            captures = (captured_data
+                        .get("purchase_units", [{}])[0]
+                        .get("payments", {})
+                        .get("captures", []))
+
+            if not captures:
+                raise ValueError("No capture info found in purchase_units->payments->captures")
+
+            first_capture = captures[0]
+            payment_id = first_capture.get("id")
+            create_time_str = first_capture.get("create_time")
+            seller_receivable_breakdown = first_capture.get("seller_receivable_breakdown", {})
+            net_amount = seller_receivable_breakdown.get("net_amount", {}).get("value")
+
+            # Convert create_time from UTC -> UTC-5
+            if create_time_str:
+                parsed_utc = isoparse(create_time_str)
+                tz_utc5 = pytz.timezone("Etc/GMT+5")
+                local_time = parsed_utc.astimezone(tz_utc5)
+                pedido.fecha_pago = local_time
+            else:
+                # fallback to "now"
+                pedido.fecha_pago = datetime.now(pytz.timezone("Etc/GMT+5"))
+
+            pedido.pago_id = payment_id
+            pedido.detalles_pago = captured_data
+            pedido.estado_pedido_id = 4  # Pagado
+            pedido.ingreso_neto = net_amount
+
+            # When we leave the 'with db.session.begin()' block successfully, DB changes commit
+
+        # If we reach here, both the DB commit succeeded AND the Firebase delete succeeded
+        return jsonify({"message": "Order captured successfully", "status": captured_data.get('status')}), 200
 
     except requests.HTTPError as http_err:
-        # If PayPal returned a 4xx/5xx, you'll see details in http_err.response.text
+        # PayPal returned 4xx/5xx
         logger.error(f"PayPal HTTP error capturing order {order_id}: {http_err.response.text}")
         return jsonify({"error": http_err.response.text}), http_err.response.status_code
 
     except Exception as e:
+        # Any other error -> logs + 500
         logger.error(f"Error capturing order {order_id}: {e}")
         return jsonify({"error": str(e)}), 500
+
