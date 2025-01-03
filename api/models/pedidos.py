@@ -13,6 +13,7 @@ class Pedidos(db.Model):
     impuesto_id = db.Column(db.Integer, db.ForeignKey('impuestos.impuesto_id'), nullable=False)
     precio_final = db.Column(db.Numeric(10, 2), nullable=False)
     pago_id = db.Column(db.String(1000), nullable=False)
+    temporal_cart_id = db.Column(db.String(100), nullable=False)
 
     estado_pedido = db.relationship('EstadosPedidos', backref=db.backref('pedidos', lazy=True))
     direcciones = db.relationship('Direcciones', backref=db.backref('pedidos', lazy=True))
@@ -29,5 +30,6 @@ class Pedidos(db.Model):
             "precio": str(self.precio),
             "impuesto_id": self.impuesto_id,
             "precio_final": str(self.precio_final),
-            "pago_id": self.pago_id
+            "pago_id": self.pago_id,
+            "temporal_cart_id": self.temporal_cart_id
         }

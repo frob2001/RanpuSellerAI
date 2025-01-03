@@ -1,4 +1,5 @@
 import requests
+import os
 from flask import Flask, request, render_template, jsonify
 import logging
 from config import config
@@ -9,6 +10,14 @@ from services import (
     conversation_history
 )
 from flask_cors import CORS
+import firebase_admin
+from firebase_admin import credentials, db
+
+#FIREBASE
+cred = credentials.Certificate('firebase_account_key.json')
+firebase_admin.initialize_app(cred, {
+    'databaseURL': os.getenv('FIREBASE_DATABASE_URL')
+})
 
 #API 
 from api.database import init_db
@@ -27,13 +36,14 @@ from api.routes import (
     estados_impresoras_bp,
     categorias_filamentos_bp,
     filamentos_bp,
-    impresoras_bp
+    impresoras_bp,
+    paypal_bp
 )
 
 app = Flask(__name__)
 
 # Configuración de CORS
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}})
 
 init_db(app)
 init_swagger(app)
@@ -51,6 +61,7 @@ app.register_blueprint(estados_impresoras_bp, url_prefix="/api/estados_impresora
 app.register_blueprint(categorias_filamentos_bp, url_prefix="/api/categorias_filamentos")
 app.register_blueprint(filamentos_bp, url_prefix="/api/filamentos")
 app.register_blueprint(impresoras_bp, url_prefix="/api/impresoras")
+app.register_blueprint(paypal_bp, url_prefix="/api/paypal")
 
 # Configuration in production mode
 app.config.from_object(config['production'])

@@ -23,7 +23,8 @@ usuarios_schema = UsuariosSchema(many=True)
                 'items': {
                     'type': 'object',
                     'properties': {
-                        'usuario_id': {'type': 'integer', 'example': 1}
+                        'usuario_id': {'type': 'integer', 'example': 1},
+                        'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'}
                     }
                 }
             }
@@ -48,7 +49,8 @@ def get_usuarios():
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'usuario_id': {'type': 'integer', 'example': 1}
+                    'usuario_id': {'type': 'integer', 'example': 1},
+                    'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'}
                 }
             }
         }
@@ -59,7 +61,8 @@ def get_usuarios():
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'usuario_id': {'type': 'integer', 'example': 1}
+                    'usuario_id': {'type': 'integer', 'example': 1},
+                    'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'}
                 }
             }
         },
@@ -98,7 +101,8 @@ def create_usuario():
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'usuario_id': {'type': 'integer', 'example': 1}
+                    'usuario_id': {'type': 'integer', 'example': 1},
+                    'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'}
                 }
             }
         },

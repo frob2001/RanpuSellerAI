@@ -1,10 +1,14 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
+from firebase_admin import db as firebase_db
 from ..models.pedidos import Pedidos
 from ..models.pedidos_usuario import PedidosUsuario
 from ..models.productos_pedidos import ProductosPedidos
 from ..models.direcciones import Direcciones
+from ..models.impuestos import Impuestos
+from ..models.productos import Productos
 from ..schemas.pedidos_schema import PedidosSchema
+from ..models.usuarios import Usuarios
 from ..database import db
 
 # Crear el Blueprint para pedidos
@@ -333,12 +337,11 @@ def get_pedidos_por_usuario(usuario_id):
 
     return jsonify(response), 200
 
-
-@pedidos_bp.route('/', methods=['POST'])
+@pedidos_bp.route('', methods=['POST'], strict_slashes=False)
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Crear un nuevo pedido con dirección y usuario',
-    'description': 'Crea un nuevo pedido, incluyendo la dirección asociada, usuario, productos relacionados, estado e impuesto.',
+    'description': 'Crea un nuevo pedido, obteniendo impuestos activos y carrito del usuario desde Firebase.',
     'parameters': [
         {
             'name': 'body',
@@ -347,15 +350,6 @@ def get_pedidos_por_usuario(usuario_id):
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
-                    'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
-                    'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
-                    'estado_pedido_id': {'type': 'integer', 'example': 1},
-                    'impuesto_id': {'type': 'integer', 'example': 1},
-                    'precio': {'type': 'string', 'example': '100.00'},
-                    'precio_final': {'type': 'string', 'example': '112.00'},
-                    'pago_id': {'type': 'string', 'example': 'PAY123'},
-                    'usuario_id': {'type': 'integer', 'example': 1},
                     'direccion': {
                         'type': 'object',
                         'properties': {
@@ -375,22 +369,9 @@ def get_pedidos_por_usuario(usuario_id):
                             'calle_principal', 'ciudad', 'provincia'
                         ]
                     },
-                    'productos': {
-                        'type': 'array',
-                        'items': {
-                            'type': 'object',
-                            'properties': {
-                                'producto_id': {'type': 'integer', 'example': 1},
-                                'cantidad': {'type': 'integer', 'example': 2}
-                            }
-                        }
-                    }
+                    'usuario_id': {'type': 'integer', 'example': 1}
                 },
-                'required': [
-                    'fecha_envio', 'fecha_entrega', 'fecha_pago',
-                    'estado_pedido_id', 'impuesto_id', 'precio', 'precio_final',
-                    'pago_id', 'usuario_id', 'direccion', 'productos'
-                ]
+                'required': ['direccion', 'usuario_id']
             }
         }
     ],
@@ -403,86 +384,228 @@ def get_pedidos_por_usuario(usuario_id):
                     'pedido_id': {'type': 'integer', 'example': 1},
                     'direccion_id': {'type': 'integer', 'example': 1},
                     'usuario_id': {'type': 'integer', 'example': 1},
-                    'message': {'type': 'string', 'example': 'Pedido, dirección y usuario asociados exitosamente'}
+                    'message': {'type': 'string', 'example': 'Pedido creado exitosamente'}
                 }
             }
         },
-        400: {'description': 'Datos inválidos en la solicitud'},
         500: {'description': 'Error interno del servidor'}
     }
 })
 def create_pedido():
-    """Crear un nuevo pedido con dirección, usuario y productos relacionados."""
+    """Crear un nuevo pedido evitando duplicidad por temporal_cart_id y 'Esperando pago'."""
     data = request.get_json()
 
-    # Validar campos obligatorios
-    required_fields = [
-        'fecha_envio', 'fecha_entrega', 'fecha_pago',
-        'estado_pedido_id', 'impuesto_id', 'precio', 'precio_final',
-        'pago_id', 'usuario_id', 'direccion', 'productos'
-    ]
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"message": f"El campo '{field}' es obligatorio"}), 400
+    usuario_id = data.get('usuario_id')
+    direccion_data = data.get('direccion')
+
+    # Validar que se haya recibido la dirección y el usuario
+    if not direccion_data or not usuario_id:
+        return jsonify({"message": "Dirección y usuario_id son obligatorios"}), 400
 
     try:
-        # Crear la dirección
-        direccion_data = data['direccion']
-        nueva_direccion = Direcciones(
-            cedula=direccion_data['cedula'],
-            nombre_completo=direccion_data['nombre_completo'],
-            telefono=direccion_data['telefono'],
-            calle_principal=direccion_data['calle_principal'],
-            calle_secundaria=direccion_data.get('calle_secundaria'),
-            ciudad=direccion_data['ciudad'],
-            provincia=direccion_data['provincia'],
-            numeracion=direccion_data.get('numeracion'),
-            referencia=direccion_data.get('referencia'),
-            codigo_postal=direccion_data.get('codigo_postal')
-        )
-        db.session.add(nueva_direccion)
-        db.session.flush()  # Obtener el direccion_id antes de confirmar
 
-        # Crear el pedido
-        nuevo_pedido = Pedidos(
-            fecha_envio=data['fecha_envio'],
-            fecha_entrega=data['fecha_entrega'],
-            fecha_pago=data['fecha_pago'],
-            estado_pedido_id=data['estado_pedido_id'],
-            direccion_id=nueva_direccion.direccion_id,
-            impuesto_id=data['impuesto_id'],
-            precio=data['precio'],
-            precio_final=data['precio_final'],
-            pago_id=data['pago_id']
-        )
-        db.session.add(nuevo_pedido)
-        db.session.flush()  # Obtener el pedido_id antes del commit
+        # 1. Traer los pedidos del usuario
+        user = Usuarios.query.filter_by(firebase_uid=usuario_id).first()
 
-        # Asociar el pedido al usuario
-        usuario_pedido = PedidosUsuario(
-            pedido_id=nuevo_pedido.pedido_id,
-            usuario_id=data['usuario_id']
-        )
-        db.session.add(usuario_pedido)
+        if not user:
+            new_user = Usuarios(firebase_uid=usuario_id)
+            db.session.add(new_user)
+            db.session.flush()  # Get the user ID without committing yet
+            user = new_user
 
-        # Agregar productos al pedido
-        for producto in data['productos']:
-            producto_pedido = ProductosPedidos(
-                pedido_id=nuevo_pedido.pedido_id,
-                producto_id=producto['producto_id'],
-                cantidad=producto['cantidad']
+        pedido_usuario = PedidosUsuario.query.filter_by(usuario_id=user.usuario_id).all()
+        pedido_ids = [p.pedido_id for p in pedido_usuario]
+
+        # 2. Recuperar el carrito del usuario desde Firebase
+        cart_ref = firebase_db.reference(f'/carts/{usuario_id}')
+        cart_snapshot = cart_ref.get()
+
+        if not cart_snapshot or 'items' not in cart_snapshot or not cart_snapshot['items']:
+            return jsonify({"message": "El carrito está vacío o no existe"}), 400
+
+        cart_items = cart_snapshot['items']
+        temporal_cart_id = cart_snapshot.get('temporalId')
+
+        # 3. Descartar que se quiera guardar un pedido exactamente igual a uno existente, pero actualizando la dirección de todas maneras
+        existing_pedido = Pedidos.query.filter(
+            Pedidos.pedido_id.in_(pedido_ids),
+            Pedidos.temporal_cart_id == temporal_cart_id
+        ).first()
+
+        if existing_pedido:
+
+            direccion_existente = Direcciones.query.get(existing_pedido.direccion_id)
+            
+            if direccion_existente:
+                direccion_existente.cedula = direccion_data['cedula']
+                direccion_existente.nombre_completo = direccion_data['nombre_completo']
+                direccion_existente.telefono = direccion_data['telefono']
+                direccion_existente.calle_principal = direccion_data['calle_principal']
+                direccion_existente.ciudad = direccion_data['ciudad']
+                direccion_existente.provincia = direccion_data['provincia']
+                direccion_existente.calle_secundaria = direccion_data.get('calle_secundaria')
+                direccion_existente.numeracion = direccion_data.get('numeracion')
+                direccion_existente.referencia = direccion_data.get('referencia')
+                direccion_existente.codigo_postal = direccion_data.get('codigo_postal')
+                db.session.flush()
+                db.session.commit()
+
+
+            return jsonify({
+                "message": "Pedido ya existe con este temporal_cart_id, dirección actualizada",
+                "pedido_id": existing_pedido.pedido_id
+            }), 201
+
+        # 4. Calcular el precio total del carrito
+        subtotal = 0
+
+        for item in cart_items:
+            producto_id = item.get('databaseProductId')  # Use the correct key
+            quantity = item.get('quantity', 0)
+
+            if not producto_id or not isinstance(quantity, int) or quantity <= 0:
+                return jsonify({"message": f"ID de producto o cantidad inválida en el item: {item}"}), 400
+
+            producto = Productos.query.get(producto_id)
+            if not producto:
+                return jsonify({"message": f"Producto con ID {producto_id} no encontrado"}), 404
+
+            # Multiply price by quantity and accumulate in the subtotal
+            subtotal += float(producto.precio) * quantity
+        
+        # 5. Obtener el impuesto activo
+        active_tax = Impuestos.query.filter_by(activo=True).first()
+        if not active_tax:
+            return jsonify({"message": "No hay impuesto activo configurado"}), 400
+
+        tax_percentage = float(active_tax.porcentaje) / 100
+        calculated_tax = subtotal * tax_percentage
+        shipping_fee = 2.00
+        total_price = subtotal + calculated_tax + shipping_fee
+
+        # 6. Verificar si ya existe un pedido con el estado 'Esperando pago'
+        existing_pending_pedido = Pedidos.query.filter(
+            Pedidos.pedido_id.in_(pedido_ids),
+            Pedidos.estado_pedido_id == 8  # 'Esperando pago'
+        ).first()
+
+        if existing_pending_pedido:
+            # Sobreescribir el pedido existente
+            
+            # 7. Actualizar la dirección existente
+            direccion_existente = Direcciones.query.get(existing_pending_pedido.direccion_id)
+            
+            if direccion_existente:
+                direccion_existente.cedula = direccion_data['cedula']
+                direccion_existente.nombre_completo = direccion_data['nombre_completo']
+                direccion_existente.telefono = direccion_data['telefono']
+                direccion_existente.calle_principal = direccion_data['calle_principal']
+                direccion_existente.ciudad = direccion_data['ciudad']
+                direccion_existente.provincia = direccion_data['provincia']
+                direccion_existente.calle_secundaria = direccion_data.get('calle_secundaria')
+                direccion_existente.numeracion = direccion_data.get('numeracion')
+                direccion_existente.referencia = direccion_data.get('referencia')
+                direccion_existente.codigo_postal = direccion_data.get('codigo_postal')
+                db.session.flush()
+            else:
+                nueva_direccion = Direcciones(
+                    cedula=direccion_data['cedula'],
+                    nombre_completo=direccion_data['nombre_completo'],
+                    telefono=direccion_data['telefono'],
+                    calle_principal=direccion_data['calle_principal'],
+                    ciudad=direccion_data['ciudad'],
+                    provincia=direccion_data['provincia'],
+                    calle_secundaria=direccion_data.get('calle_secundaria'),
+                    numeracion=direccion_data.get('numeracion'),
+                    referencia=direccion_data.get('referencia'),
+                    codigo_postal=direccion_data.get('codigo_postal')
+                )
+                db.session.add(nueva_direccion)
+                db.session.flush()
+                existing_pending_pedido.direccion_id = nueva_direccion.direccion_id
+
+            # 8. Actualizar el pedido existente
+            existing_pending_pedido.precio = subtotal
+            existing_pending_pedido.precio_final = total_price
+            existing_pending_pedido.impuesto_id = active_tax.impuesto_id
+            existing_pending_pedido.temporal_cart_id = temporal_cart_id  # Actualizar temporal ID
+            db.session.flush()
+
+            # 9. Eliminar productos previos y agregar los nuevos
+            ProductosPedidos.query.filter_by(pedido_id=existing_pending_pedido.pedido_id).delete()
+
+            for item in cart_items:
+                producto_pedido = ProductosPedidos(
+                    pedido_id=existing_pending_pedido.pedido_id,
+                    producto_id=item['databaseProductId'],
+                    cantidad=item['quantity']
+                )
+                db.session.add(producto_pedido)
+
+            db.session.commit()
+
+            return jsonify({
+                "pedido_id": existing_pending_pedido.pedido_id,
+                "direccion_id": existing_pending_pedido.direccion_id,
+                "usuario_id": user.usuario_id,
+                "message": "Pedido actualizado exitosamente"
+            }), 201
+
+        else:
+            # 7. Crear un nuevo pedido (caso en el que no haya uno existente 'Esperando pago')
+            nueva_direccion = Direcciones(
+                cedula=direccion_data['cedula'],
+                nombre_completo=direccion_data['nombre_completo'],
+                telefono=direccion_data['telefono'],
+                calle_principal=direccion_data['calle_principal'],
+                ciudad=direccion_data['ciudad'],
+                provincia=direccion_data['provincia'],
+                calle_secundaria=direccion_data.get('calle_secundaria'),
+                numeracion=direccion_data.get('numeracion'),
+                referencia=direccion_data.get('referencia'),
+                codigo_postal=direccion_data.get('codigo_postal')
             )
-            db.session.add(producto_pedido)
+            db.session.add(nueva_direccion)
+            db.session.flush()
 
-        db.session.commit()
+            nuevo_pedido = Pedidos(
+                fecha_envio=None,
+                fecha_entrega=None,
+                fecha_pago=None,
+                estado_pedido_id=8,
+                direccion_id=nueva_direccion.direccion_id,
+                impuesto_id=active_tax.impuesto_id,
+                precio=subtotal,
+                precio_final=total_price,
+                pago_id=None,
+                temporal_cart_id=temporal_cart_id
+            )
+            db.session.add(nuevo_pedido)
+            db.session.flush()
 
-        # Respuesta exitosa
-        return jsonify({
-            "pedido_id": nuevo_pedido.pedido_id,
-            "direccion_id": nueva_direccion.direccion_id,
-            "usuario_id": data['usuario_id'],
-            "message": "Pedido, dirección y usuario asociados exitosamente"
-        }), 201
+            usuario_pedido = PedidosUsuario(
+                pedido_id=nuevo_pedido.pedido_id,
+                usuario_id=user.usuario_id
+            )
+            db.session.add(usuario_pedido)
+
+            for item in cart_items:
+                producto_pedido = ProductosPedidos(
+                    pedido_id=nuevo_pedido.pedido_id,
+                    producto_id=item['databaseProductId'],
+                    cantidad=item['quantity']
+                )
+                db.session.add(producto_pedido)
+
+            db.session.commit()
+
+            return jsonify({
+                "pedido_id": nuevo_pedido.pedido_id,
+                "direccion_id": nueva_direccion.direccion_id,
+                "usuario_id": user.usuario_id,
+                "message": "Pedido creado exitosamente"
+            }), 201
+
 
     except Exception as e:
         db.session.rollback()
