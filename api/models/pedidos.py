@@ -4,6 +4,7 @@ class Pedidos(db.Model):
     __tablename__ = "pedidos"
 
     pedido_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    fecha_creacion = db.Column(db.DateTime, nullable=False)
     fecha_envio = db.Column(db.DateTime, nullable=False)
     fecha_entrega = db.Column(db.DateTime, nullable=False)
     fecha_pago = db.Column(db.DateTime, nullable=False)
@@ -24,6 +25,7 @@ class Pedidos(db.Model):
     def to_dict(self):
         return {
             "pedido_id": self.pedido_id,
+            "fecha_creacion": self.fecha_creacion.isoformat() if self.fecha_creacion else None,
             "fecha_envio": self.fecha_envio.isoformat() if self.fecha_envio else None,
             "fecha_entrega": self.fecha_entrega.isoformat() if self.fecha_entrega else None,
             "fecha_pago": self.fecha_pago.isoformat() if self.fecha_pago else None,

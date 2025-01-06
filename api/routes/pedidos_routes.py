@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from firebase_admin import db as firebase_db
+import pytz
+from datetime import datetime
 from ..models.pedidos import Pedidos
 from ..models.pedidos_usuario import PedidosUsuario
 from ..models.productos_pedidos import ProductosPedidos
@@ -11,12 +13,52 @@ from ..schemas.pedidos_schema import PedidosSchema
 from ..models.usuarios import Usuarios
 from ..database import db
 
+ECUADOR_TZ = pytz.timezone("America/Guayaquil")
+MONTHS_ES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+]
+MONTHS_EN = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+]
+
 # Crear el Blueprint para pedidos
 pedidos_bp = Blueprint('pedidos', __name__)
 
 # Instancias del schema
 pedido_schema = PedidosSchema()
 multiple_pedidos_schema = PedidosSchema(many=True)
+
+def format_date_spanish(dt: datetime) -> str:
+    """Example output: 15 de noviembre, 2023."""
+    if dt is None:
+        return ""
+
+    # 1) Interpret dt as UTC (attach tzinfo=UTC)
+    dt_utc = dt.replace(tzinfo=pytz.utc)
+    # 2) Convert to Ecuador time (UTC-5)
+    local_dt = dt_utc.astimezone(ECUADOR_TZ)
+
+    day = local_dt.day
+    month = MONTHS_ES[local_dt.month - 1]
+    year = local_dt.year
+    return f"{day} de {month}, {year}"
+
+def format_date_english(dt: datetime) -> str:
+    """Example output: November 15, 2023."""
+    if dt is None:
+        return ""
+
+    # 1) Interpret dt as UTC
+    dt_utc = dt.replace(tzinfo=pytz.utc)
+    # 2) Convert to Ecuador time (UTC-5)
+    local_dt = dt_utc.astimezone(ECUADOR_TZ)
+
+    day = local_dt.day
+    month = MONTHS_EN[local_dt.month - 1]
+    year = local_dt.year
+    return f"{month} {day}, {year}"
 
 @pedidos_bp.route('/', methods=['GET'])
 @swag_from({
@@ -224,115 +266,168 @@ def get_pedido_por_id(pedido_id):
 
     return jsonify(response), 200
 
-@pedidos_bp.route('/usuario/<int:usuario_id>', methods=['GET'])
+@pedidos_bp.route('/usuario/<string:usuario_id>', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],
-    'summary': 'Obtener pedidos por ID de usuario',
-    'description': 'Obtiene una lista de todos los pedidos asociados a un usuario específico, incluyendo detalles de estado, dirección, impuesto, productos relacionados y usuario asociado.',
+    'summary': 'Obtener pedidos por ID de usuario (versión resumida)',
+    'description': (
+        'Obtiene una lista de pedidos asociados a un usuario específico, '
+        'formateando la fecha de creación/pago en español e inglés, mostrando '
+        'el estado en ambos idiomas, enumerando los nombres de los productos '
+        'en una cadena separada por comas, calculando la cantidad total, y '
+        'exponiendo un thumbnail de la primera imagen del primer producto.'
+    ),
     'parameters': [
         {
             'name': 'usuario_id',
             'in': 'path',
             'required': True,
-            'type': 'integer',
-            'description': 'ID del usuario cuyos pedidos se desean obtener'
+            'type': 'string',
+            'description': 'Firebase UID del usuario cuyos pedidos se desean obtener'
         }
     ],
     'responses': {
         200: {
-            'description': 'Lista de pedidos para el usuario',
+            'description': 'Lista de pedidos con fechas formateadas, estado en ES/EN y otros datos',
             'schema': {
                 'type': 'array',
                 'items': {
                     'type': 'object',
                     'properties': {
-                        'pedido_id': {'type': 'integer', 'example': 1},
-                        'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
-                        'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
-                        'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
-                        'estado_pedido': {
+                        'pedido_id': {
+                            'type': 'integer',
+                            'example': 123
+                        },
+                        'fecha_creacion': {
+                            'type': 'string',
+                            'example': '2025-01-20T15:32:00'
+                        },
+                        'fecha_creacion_es': {
+                            'type': 'string',
+                            'example': '20 de enero, 2025'
+                        },
+                        'fecha_creacion_en': {
+                            'type': 'string',
+                            'example': 'January 20, 2025'
+                        },
+                        'estado': {
                             'type': 'object',
                             'properties': {
-                                'estado_pedido_id': {'type': 'integer', 'example': 1},
-                                'nombre': {'type': 'string', 'example': 'Imprimiendo'}
-                            }
-                        },
-                        'direccion': {
-                            'type': 'object',
-                            'properties': {
-                                'direccion_id': {'type': 'integer', 'example': 1},
-                                'cedula': {'type': 'string', 'example': '1234567890'},
-                                'nombre_completo': {'type': 'string', 'example': 'John Doe'},
-                                'telefono': {'type': 'string', 'example': '+593999999999'},
-                                'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
-                                'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
-                                'ciudad': {'type': 'string', 'example': 'Springfield'},
-                                'provincia': {'type': 'string', 'example': 'Pichincha'},
-                                'numeracion': {'type': 'string', 'example': '123'},
-                                'referencia': {'type': 'string', 'example': 'Frente al parque'},
-                                'codigo_postal': {'type': 'string', 'example': '170123'}
-                            }
-                        },
-                        'impuesto': {
-                            'type': 'object',
-                            'properties': {
-                                'impuesto_id': {'type': 'integer', 'example': 1},
-                                'nombre': {'type': 'string', 'example': 'IVA'},
-                                'porcentaje': {'type': 'string', 'example': '15.00'}
-                            }
-                        },
-                        'usuario_id': {'type': 'integer', 'example': 1},
-                        'pago_id': {'type': 'string', 'example': 'PAY123'},
-                        'precio': {'type': 'string', 'example': '100.00'},
-                        'precio_final': {'type': 'string', 'example': '112.00'},
-                        'productos': {
-                            'type': 'array',
-                            'items': {
-                                'type': 'object',
-                                'properties': {
-                                    'producto_id': {'type': 'integer', 'example': 1},
-                                    'nombre': {'type': 'string', 'example': 'Lámpara Redonda'},
-                                    'cantidad': {'type': 'integer', 'example': 2}
+                                'nombre': {
+                                    'type': 'string',
+                                    'example': 'Pagado'
+                                },
+                                'nombre_ingles': {
+                                    'type': 'string',
+                                    'example': 'Paid'
                                 }
                             }
+                        },
+                        'productos_nombres': {
+                            'type': 'string',
+                            'example': 'RanpuLamp, Lámpara curva'
+                        },
+                        'cantidad_total': {
+                            'type': 'integer',
+                            'example': 2
+                        },
+                        'thumbnail': {
+                            'type': 'string',
+                            'example': 'https://mybucket.s3.amazonaws.com/image1.jpg'
                         }
                     }
                 }
             }
         },
-        404: {'description': 'Usuario no encontrado o sin pedidos'}
+        404: {
+            'description': 'Usuario no encontrado o sin pedidos'
+        }
     }
 })
 def get_pedidos_por_usuario(usuario_id):
-    """Obtener todos los pedidos asociados a un usuario, incluyendo detalles, productos relacionados y usuario asociado."""
-    pedidos_usuario = PedidosUsuario.query.filter_by(usuario_id=usuario_id).all()
+    """Obtener todos los pedidos asociados a un usuario, 
+       con nombres de productos, fecha de creación formateada, 
+       total de artículos, estado en ES/EN y thumbnail."""
+    user = Usuarios.query.filter_by(firebase_uid=usuario_id).first()
+    if not user:
+        return jsonify({"message": "Usuario no encontrado"}), 404
+
+    pedidos_usuario = PedidosUsuario.query.filter_by(usuario_id=user.usuario_id).all()
     if not pedidos_usuario:
-        return jsonify({"message": "Usuario no encontrado o sin pedidos"}), 404
+        return jsonify({"message": "Usuario sin pedidos"}), 404
 
     response = []
     for pedido_usuario in pedidos_usuario:
         pedido = Pedidos.query.get(pedido_usuario.pedido_id)
-        if pedido:
-            productos_pedidos = [
-                {
-                    "producto_id": item.producto.producto_id,
-                    "nombre": item.producto.nombre,
-                    "cantidad": item.cantidad
-                } for item in ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
-            ]
+        if not pedido:
+            continue  # Skip if pedido not found for any reason
 
-            pedido_dict = pedido.to_dict()
-            pedido_dict.pop("estado_pedido_id", None)
-            pedido_dict.pop("direccion_id", None)
-            pedido_dict.pop("impuesto_id", None)
+        # Get all rows in productos_pedidos for this pedido
+        pp_items = ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
 
-            pedido_dict["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
-            pedido_dict["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
-            pedido_dict["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-            pedido_dict["productos"] = productos_pedidos
-            pedido_dict["usuario_id"] = usuario_id
+        # Gather product names and sum quantities
+        product_names = []
+        total_cantidad = 0
 
-            response.append(pedido_dict)
+        # We also want the first product’s first image (if any) as thumbnail
+        thumbnail = None
+
+        for idx, pp_item in enumerate(pp_items):
+            # Accumulate name
+            product_names.append(pp_item.producto.nombre)
+            # Accumulate quantity
+            total_cantidad += pp_item.cantidad
+
+            # Grab thumbnail from the very first product in the list
+            if idx == 0:
+                # If the product has images, pick the first
+                if pp_item.producto.imagenes:
+                    thumbnail = pp_item.producto.imagenes[0].ubicacion
+                else:
+                    thumbnail = None
+
+        # Create the comma-separated string of product names
+        product_names_str = ", ".join(product_names)
+
+        # Format creation date in both Spanish and English
+        fecha_creacion_es = None
+        fecha_creacion_en = None
+        fecha_creacion = None
+
+        if pedido.fecha_pago:
+            fecha_creacion = pedido.fecha_pago
+        else:
+            fecha_creacion = pedido.fecha_creacion
+
+        if fecha_creacion:
+            fecha_creacion_es = format_date_spanish(fecha_creacion)
+            fecha_creacion_en = format_date_english(fecha_creacion)
+
+        # Build the final dictionary
+        pedido_dict = {
+            "pedido_id": pedido.pedido_id,
+            # Keep your existing fields if you like:
+            "fecha_creacion": fecha_creacion.isoformat() if fecha_creacion else None,
+            "fecha_creacion_es": fecha_creacion_es,  # e.g. "15 de noviembre de 2023"
+            "fecha_creacion_en": fecha_creacion_en,  # e.g. "November 15, 2023"
+
+            # In the Figma, you have something like "Pedido el 15 de noviembre, 2023 (2 artículos)"
+            # You can combine these if you want in a single string.
+
+            "estado": {
+                "nombre": pedido.estado_pedido.nombre if pedido.estado_pedido else None,
+                "nombre_ingles": pedido.estado_pedido.nombre_ingles if pedido.estado_pedido else None
+            },
+
+            # A comma-separated list of product names for display
+            "productos_nombres": product_names_str,
+            # The total quantity of items
+            "cantidad_total": total_cantidad,
+            # The first product's first image (thumbnail)
+            "thumbnail": thumbnail,
+        }
+
+        response.append(pedido_dict)
 
     return jsonify(response), 200
 
