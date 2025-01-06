@@ -1,6 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from firebase_admin import db as firebase_db
+from sqlalchemy import and_, or_
+from datetime import datetime
 import pytz
 from datetime import datetime
 from ..models.pedidos import Pedidos
@@ -269,13 +271,11 @@ def get_pedido_por_id(pedido_id):
 @pedidos_bp.route('/usuario/<string:usuario_id>', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],
-    'summary': 'Obtener pedidos por ID de usuario (versión resumida)',
+    'summary': 'Obtener pedidos por ID de usuario (con filtros y paginación)',
     'description': (
-        'Obtiene una lista de pedidos asociados a un usuario específico, '
-        'formateando la fecha de creación/pago en español e inglés, mostrando '
-        'el estado en ambos idiomas, enumerando los nombres de los productos '
-        'en una cadena separada por comas, calculando la cantidad total, y '
-        'exponiendo un thumbnail de la primera imagen del primer producto.'
+        'Obtiene una lista de pedidos asociados a un usuario específico. '
+        'Permite filtrar por fechas de creación (start_date, end_date) y estado del pedido (estado_pedido_id). '
+        'Los resultados se paginan y se pueden controlar mediante los parámetros page y per_page.'
     ),
     'parameters': [
         {
@@ -284,57 +284,110 @@ def get_pedido_por_id(pedido_id):
             'required': True,
             'type': 'string',
             'description': 'Firebase UID del usuario cuyos pedidos se desean obtener'
+        },
+        {
+            'name': 'start_date',
+            'in': 'query',
+            'type': 'string',
+            'format': 'date',
+            'description': 'Filtra pedidos a partir de esta fecha (formato: YYYY-MM-DD). Si no se especifica, no se aplica filtro inicial.'
+        },
+        {
+            'name': 'end_date',
+            'in': 'query',
+            'type': 'string',
+            'format': 'date',
+            'description': 'Filtra pedidos hasta esta fecha (formato: YYYY-MM-DD). Si no se especifica, no se aplica filtro final.'
+        },
+        {
+            'name': 'estado_pedido_id',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Filtra por el estado del pedido. Si no se especifica, devuelve pedidos de todos los estados.'
+        },
+        {
+            'name': 'page',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Número de página para la paginación. Por defecto es 1.'
+        },
+        {
+            'name': 'per_page',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Cantidad de elementos por página. El valor predeterminado es 10.'
         }
     ],
     'responses': {
         200: {
-            'description': 'Lista de pedidos con fechas formateadas, estado en ES/EN y otros datos',
+            'description': 'Lista de pedidos paginados con fechas formateadas, estado en ES/EN, productos y thumbnail',
             'schema': {
-                'type': 'array',
-                'items': {
-                    'type': 'object',
-                    'properties': {
-                        'pedido_id': {
-                            'type': 'integer',
-                            'example': 123
-                        },
-                        'fecha_creacion': {
-                            'type': 'string',
-                            'example': '2025-01-20T15:32:00'
-                        },
-                        'fecha_creacion_es': {
-                            'type': 'string',
-                            'example': '20 de enero, 2025'
-                        },
-                        'fecha_creacion_en': {
-                            'type': 'string',
-                            'example': 'January 20, 2025'
-                        },
-                        'estado': {
+                'type': 'object',
+                'properties': {
+                    'pedidos': {
+                        'type': 'array',
+                        'items': {
                             'type': 'object',
                             'properties': {
-                                'nombre': {
-                                    'type': 'string',
-                                    'example': 'Pagado'
+                                'pedido_id': {
+                                    'type': 'integer',
+                                    'example': 123
                                 },
-                                'nombre_ingles': {
+                                'fecha_creacion': {
                                     'type': 'string',
-                                    'example': 'Paid'
+                                    'example': '2025-01-20T15:32:00'
+                                },
+                                'fecha_creacion_es': {
+                                    'type': 'string',
+                                    'example': '20 de enero, 2025'
+                                },
+                                'fecha_creacion_en': {
+                                    'type': 'string',
+                                    'example': 'January 20, 2025'
+                                },
+                                'estado': {
+                                    'type': 'object',
+                                    'properties': {
+                                        'nombre': {
+                                            'type': 'string',
+                                            'example': 'Pagado'
+                                        },
+                                        'nombre_ingles': {
+                                            'type': 'string',
+                                            'example': 'Paid'
+                                        }
+                                    }
+                                },
+                                'productos_nombres': {
+                                    'type': 'string',
+                                    'example': 'RanpuLamp, Lámpara curva'
+                                },
+                                'cantidad_total': {
+                                    'type': 'integer',
+                                    'example': 2
+                                },
+                                'thumbnail': {
+                                    'type': 'string',
+                                    'example': 'https://mybucket.s3.amazonaws.com/image1.jpg'
                                 }
                             }
-                        },
-                        'productos_nombres': {
-                            'type': 'string',
-                            'example': 'RanpuLamp, Lámpara curva'
-                        },
-                        'cantidad_total': {
-                            'type': 'integer',
-                            'example': 2
-                        },
-                        'thumbnail': {
-                            'type': 'string',
-                            'example': 'https://mybucket.s3.amazonaws.com/image1.jpg'
                         }
+                    },
+                    'total_items': {
+                        'type': 'integer',
+                        'example': 45
+                    },
+                    'total_pages': {
+                        'type': 'integer',
+                        'example': 5
+                    },
+                    'current_page': {
+                        'type': 'integer',
+                        'example': 2
+                    },
+                    'per_page': {
+                        'type': 'integer',
+                        'example': 10
                     }
                 }
             }
@@ -345,100 +398,96 @@ def get_pedido_por_id(pedido_id):
     }
 })
 def get_pedidos_por_usuario(usuario_id):
-    """Obtener todos los pedidos asociados a un usuario, 
-       con nombres de productos, fecha de creación formateada, 
-       total de artículos, estado en ES/EN y thumbnail."""
+    """Obtener todos los pedidos asociados a un usuario con filtros y paginación."""
+    
     user = Usuarios.query.filter_by(firebase_uid=usuario_id).first()
     if not user:
         return jsonify({"message": "Usuario no encontrado"}), 404
 
-    pedidos_usuario = PedidosUsuario.query.filter_by(usuario_id=user.usuario_id).all()
-    if not pedidos_usuario:
-        return jsonify({"message": "Usuario sin pedidos"}), 404
+    # Fetch search params from the request
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    estado_pedido_id = request.args.get('estado_pedido_id')
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
 
+    # Base query for pedidos_usuario
+    query = Pedidos.query.join(PedidosUsuario).filter(
+        PedidosUsuario.usuario_id == user.usuario_id
+    )
+
+    # Apply filters conditionally
+    filters = []
+    if start_date:
+        filters.append(Pedidos.fecha_creacion >= start_date)
+    if end_date:
+        filters.append(Pedidos.fecha_creacion <= end_date)
+    if estado_pedido_id:
+        filters.append(Pedidos.estado_pedido_id == estado_pedido_id)
+
+    # Apply all filters to the query
+    if filters:
+        query = query.filter(and_(*filters))
+
+    # Paginate the query
+    paginated_pedidos = query.paginate(page=page, per_page=per_page, error_out=False)
+    pedidos = paginated_pedidos.items
+
+    if not pedidos:
+        return jsonify({"message": "Usuario sin pedidos en el rango especificado"}), 404
+
+    # Build response
     response = []
-    for pedido_usuario in pedidos_usuario:
-        pedido = Pedidos.query.get(pedido_usuario.pedido_id)
-        if not pedido:
-            continue  # Skip if pedido not found for any reason
-
-        # Get all rows in productos_pedidos for this pedido
+    for pedido in pedidos:
         pp_items = ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
 
-        # Gather product names and sum quantities
         product_names = []
         total_cantidad = 0
-
-        # We also want the first product’s first image (if any) as thumbnail
         thumbnail = None
 
         for idx, pp_item in enumerate(pp_items):
-            # Accumulate name
             product_names.append(pp_item.producto.nombre)
-            # Accumulate quantity
             total_cantidad += pp_item.cantidad
 
-            # Grab the thumbnail image from the first product only
             if idx == 0:
-                # If the product has images
-                if pp_item.producto.imagenes:
-                    # Try to find the one where is_thumbnail == True
-                    thumb_image = next(
-                        (img for img in pp_item.producto.imagenes if img.is_thumbnail),
-                        None
-                    )
-                    if thumb_image:
-                        thumbnail = thumb_image.ubicacion
-                    else:
-                        # If no image is flagged as thumbnail, fall back to the first image
-                        thumbnail = pp_item.producto.imagenes[0].ubicacion
-                else:
-                    thumbnail = None
+                # Find the thumbnail image
+                thumb_image = next(
+                    (img for img in pp_item.producto.imagenes if img.is_thumbnail),
+                    None
+                )
+                thumbnail = thumb_image.ubicacion if thumb_image else (
+                    pp_item.producto.imagenes[0].ubicacion if pp_item.producto.imagenes else None
+                )
 
-        # Create the comma-separated string of product names
         product_names_str = ", ".join(product_names)
 
-        # Format creation date in both Spanish and English
-        fecha_creacion_es = None
-        fecha_creacion_en = None
-        fecha_creacion = None
+        fecha_creacion = pedido.fecha_pago or pedido.fecha_creacion
+        fecha_creacion_es = format_date_spanish(fecha_creacion)
+        fecha_creacion_en = format_date_english(fecha_creacion)
 
-        if pedido.fecha_pago:
-            fecha_creacion = pedido.fecha_pago
-        else:
-            fecha_creacion = pedido.fecha_creacion
-
-        if fecha_creacion:
-            fecha_creacion_es = format_date_spanish(fecha_creacion)
-            fecha_creacion_en = format_date_english(fecha_creacion)
-
-        # Build the final dictionary
         pedido_dict = {
             "pedido_id": pedido.pedido_id,
-            # Keep your existing fields if you like:
-            "fecha_creacion": fecha_creacion.isoformat() if fecha_creacion else None,
-            "fecha_creacion_es": fecha_creacion_es,  # e.g. "15 de noviembre de 2023"
-            "fecha_creacion_en": fecha_creacion_en,  # e.g. "November 15, 2023"
-
-            # In the Figma, you have something like "Pedido el 15 de noviembre, 2023 (2 artículos)"
-            # You can combine these if you want in a single string.
-
+            "fecha_creacion": fecha_creacion.isoformat(),
+            "fecha_creacion_es": fecha_creacion_es,
+            "fecha_creacion_en": fecha_creacion_en,
             "estado": {
-                "nombre": pedido.estado_pedido.nombre if pedido.estado_pedido else None,
-                "nombre_ingles": pedido.estado_pedido.nombre_ingles if pedido.estado_pedido else None
+                "nombre": pedido.estado_pedido.nombre,
+                "nombre_ingles": pedido.estado_pedido.nombre_ingles
             },
-
-            # A comma-separated list of product names for display
             "productos_nombres": product_names_str,
-            # The total quantity of items
             "cantidad_total": total_cantidad,
-            # The first product's first image (thumbnail)
             "thumbnail": thumbnail,
         }
-
         response.append(pedido_dict)
 
-    return jsonify(response), 200
+    # Return paginated response with metadata
+    return jsonify({
+        "pedidos": response,
+        "total_items": paginated_pedidos.total,
+        "total_pages": paginated_pedidos.pages,
+        "current_page": paginated_pedidos.page,
+        "per_page": paginated_pedidos.per_page
+    }), 200
 
 @pedidos_bp.route('', methods=['POST'], strict_slashes=False)
 @swag_from({
