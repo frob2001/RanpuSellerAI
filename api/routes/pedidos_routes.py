@@ -378,11 +378,20 @@ def get_pedidos_por_usuario(usuario_id):
             # Accumulate quantity
             total_cantidad += pp_item.cantidad
 
-            # Grab thumbnail from the very first product in the list
+            # Grab the thumbnail image from the first product only
             if idx == 0:
-                # If the product has images, pick the first
+                # If the product has images
                 if pp_item.producto.imagenes:
-                    thumbnail = pp_item.producto.imagenes[0].ubicacion
+                    # Try to find the one where is_thumbnail == True
+                    thumb_image = next(
+                        (img for img in pp_item.producto.imagenes if img.is_thumbnail),
+                        None
+                    )
+                    if thumb_image:
+                        thumbnail = thumb_image.ubicacion
+                    else:
+                        # If no image is flagged as thumbnail, fall back to the first image
+                        thumbnail = pp_item.producto.imagenes[0].ubicacion
                 else:
                     thumbnail = None
 
