@@ -13,6 +13,7 @@ from ..models.impuestos import Impuestos
 from ..models.productos import Productos
 from ..schemas.pedidos_schema import PedidosSchema
 from ..models.usuarios import Usuarios
+from ..models.imagenes_ranpulamps import ImagenesRanpulamps
 from ..database import db
 
 ECUADOR_TZ = pytz.timezone("America/Guayaquil")
@@ -696,6 +697,22 @@ def create_pedido():
                     cantidad=item['quantity']
                 )
                 db.session.add(producto_pedido)
+                db.session.flush()
+
+                # Check if the product type is 'ranpulamp' and has cropped images
+                if item.get('productType') == 'ranpulamp' and 'croppedImages' in item:
+                    cropped_images = item['croppedImages']
+                    
+                    # Delete existing images for this producto_pedido_id to avoid duplicates
+                    ImagenesRanpulamps.query.filter_by(producto_pedido_id=producto_pedido.producto_pedido_id).delete()
+
+                    # Limit to 4 images as required
+                    for image_url in cropped_images[:4]:
+                        new_image = ImagenesRanpulamps(
+                            imagen_url=image_url,
+                            producto_pedido_id=producto_pedido.producto_pedido_id
+                        )
+                        db.session.add(new_image)
 
             db.session.commit()
 
@@ -751,6 +768,19 @@ def create_pedido():
                     cantidad=item['quantity']
                 )
                 db.session.add(producto_pedido)
+                db.session.flush()
+
+                # If product is a 'ranpulamp' and has images
+                if item.get('productType') == 'ranpulamp' and 'croppedImages' in item:
+                    cropped_images = item['croppedImages']
+                    
+                    # Insert up to 4 images into imagenes_ranpulamps table
+                    for image_url in cropped_images[:4]:
+                        new_image = ImagenesRanpulamps(
+                            imagen_url=image_url,
+                            producto_pedido_id=producto_pedido.producto_pedido_id
+                        )
+                        db.session.add(new_image)
 
             db.session.commit()
 

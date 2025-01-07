@@ -4,7 +4,7 @@ class Pedidos(db.Model):
     __tablename__ = "pedidos"
 
     pedido_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    fecha_creacion = db.Column(db.DateTime, nullable=False)
+    fecha_creacion = db.Column(db.DateTime, nullable=True)
     fecha_envio = db.Column(db.DateTime, nullable=False)
     fecha_entrega = db.Column(db.DateTime, nullable=False)
     fecha_pago = db.Column(db.DateTime, nullable=False)
