@@ -419,9 +419,9 @@ def get_pedidos_por_usuario(usuario_id):
     # Apply filters conditionally
     filters = []
     if start_date:
-        filters.append(Pedidos.fecha_creacion >= start_date)
+        filters.append(or_(Pedidos.fecha_pago >= start_date, and_(Pedidos.fecha_pago == None, Pedidos.fecha_creacion >= start_date)))
     if end_date:
-        filters.append(Pedidos.fecha_creacion <= end_date)
+        filters.append(or_(Pedidos.fecha_pago <= end_date, and_(Pedidos.fecha_pago == None, Pedidos.fecha_creacion <= end_date)))
     if estado_pedido_id:
         filters.append(Pedidos.estado_pedido_id == estado_pedido_id)
 
@@ -434,7 +434,7 @@ def get_pedidos_por_usuario(usuario_id):
     pedidos = paginated_pedidos.items
 
     if not pedidos:
-        return jsonify({"message": "Usuario sin pedidos en el rango especificado"}), 404
+        return jsonify({"pedidos": []}), 200
 
     # Build response
     response = []
@@ -479,6 +479,9 @@ def get_pedidos_por_usuario(usuario_id):
             "thumbnail": thumbnail,
         }
         response.append(pedido_dict)
+
+    # Order response by fecha_creacion from newest to latest
+    response.sort(key=lambda x: x["fecha_creacion"], reverse=True)
 
     # Return paginated response with metadata
     return jsonify({
