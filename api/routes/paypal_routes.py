@@ -91,9 +91,44 @@ def create_order():
     logger.info("Creating PayPal order with dynamic cart calculation from Firebase...")
     request_body = request.get_json() or {}
     user_id = request_body.get('userId')
+    order_id = request_body.get('orderId')
 
     if not user_id:
         return jsonify({"message": "User ID is required"}), 400
+    
+    if not order_id:
+        return jsonify({"message": "Order ID is required"}), 400
+    
+    usuario = Usuarios.query.filter_by(firebase_uid=user_id).first()
+
+    if not usuario:
+        return jsonify({"message": "User not found"}), 404
+    
+    pedido = Pedidos.query.get(order_id)
+    if not pedido:
+        return jsonify({"message": "Pedido no encontrado"}), 404
+    
+    # Validar si el pedido pertenece al usuario
+    pertenece_usuario = PedidosUsuario.query.filter_by(
+        pedido_id=order_id, usuario_id=usuario.usuario_id
+    ).first()
+
+    if not pertenece_usuario:
+        return jsonify({"message": "No tienes permiso para ver este pedido"}), 403
+    
+    address_payload = {
+        "name": {
+            "full_name": pedido.direcciones.nombre_completo
+        },
+        "address": {
+            "address_line_1": pedido.direcciones.calle_principal,
+            "address_line_2": pedido.direcciones.calle_secundaria,
+            "admin_area_2": pedido.direcciones.ciudad,
+            "admin_area_1": pedido.direcciones.provincia,
+            "postal_code": pedido.direcciones.codigo_postal,
+            "country_code": 'EC'  # Ecuador by default, change as needed
+        }
+    }
 
     # Fetch user's cart from Firebase Realtime Database
     cart_ref = firebase_db.reference(f'/carts/{user_id}')
@@ -160,12 +195,14 @@ def create_order():
                                 "tax_total": {"currency_code": "USD", "value": f"{calculated_tax:.2f}"},
                                 "shipping": {"currency_code": "USD", "value": f"{delivery_fee:.2f}"}
                             }
-                        )
+                        ),
+                        shipping=address_payload
                     )
                 ],
                 application_context={
                     "return_url": f"{os.getenv('FRONTEND_URL')}/es/payment/success?userId={user_id}",
-                    "cancel_url": f"{os.getenv('FRONTEND_URL')}/es/payment/cancel"
+                    "cancel_url": f"{os.getenv('FRONTEND_URL')}/es/payment/cancel",
+                    "shipping_preference": "SET_PROVIDED_ADDRESS"
                 }
             ),
             "prefer": 'return=representation'
