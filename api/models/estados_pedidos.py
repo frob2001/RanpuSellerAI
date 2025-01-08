@@ -5,9 +5,13 @@ class EstadosPedidos(db.Model):
 
     estado_pedido_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     nombre = db.Column(db.String(50), nullable=False)
+    nombre_ingles = db.Column(db.String(50), nullable=False)
+    orden = db.Column(db.Integer, nullable=True)
 
     def to_dict(self):
         return {
             "estado_pedido_id": self.estado_pedido_id,
-            "nombre": self.nombre
+            "nombre": self.nombre,
+            "nombre_ingles": self.nombre_ingles,
+            "orden": self.orden
         }

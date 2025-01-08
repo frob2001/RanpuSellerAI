@@ -10,6 +10,7 @@ __pycache__/
 
 # Environment variables file
 .env
+firebase_account_key.json
 
 # Flask-specific ignores
 instance/

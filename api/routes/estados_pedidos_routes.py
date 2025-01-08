@@ -24,7 +24,9 @@ multiple_estados_pedidos_schema = EstadosPedidosSchema(many=True)
                     'type': 'object',
                     'properties': {
                         'estado_pedido_id': {'type': 'integer', 'example': 1},
-                        'nombre': {'type': 'string', 'example': 'Pendiente'}
+                        'orden': {'type': 'integer', 'example': '1'},
+                        'nombre': {'type': 'string', 'example': 'Esperando pago'},
+                        'nombre_ingles': {'type': 'string', 'example': 'Waiting for payment'}
                     }
                 }
             }
@@ -32,8 +34,8 @@ multiple_estados_pedidos_schema = EstadosPedidosSchema(many=True)
     }
 })
 def get_estados_pedidos():
-    """Obtener todos los estados de pedidos"""
-    estados = EstadosPedidos.query.all()
+    """Obtener todos los estados de pedidos ordenados por el campo 'orden'"""
+    estados = EstadosPedidos.query.order_by(EstadosPedidos.orden.asc()).all()
     return jsonify(multiple_estados_pedidos_schema.dump(estados)), 200
 
 @estados_pedidos_bp.route('/', methods=['POST'])
