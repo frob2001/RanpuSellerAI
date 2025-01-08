@@ -166,8 +166,12 @@ def get_todos_pedidos():
 @pedidos_bp.route('/<int:pedido_id>', methods=['GET'])
 @swag_from({
     'tags': ['Pedidos'],
-    'summary': 'Obtener un pedido por ID',
-    'description': 'Obtiene un pedido específico, incluyendo detalles, productos relacionados y usuario asociado.',
+    'summary': 'Obtener un pedido por ID si pertenece al usuario autenticado',
+    'description': (
+        'Obtiene un pedido específico si pertenece al usuario autenticado mediante '
+        'el uso de un identificador de Firebase (firebaseuid). El pedido incluirá detalles, '
+        'productos relacionados, dirección, estado y otros metadatos relevantes.'
+    ),
     'parameters': [
         {
             'name': 'pedido_id',
@@ -175,41 +179,33 @@ def get_todos_pedidos():
             'required': True,
             'type': 'integer',
             'description': 'ID del pedido a obtener'
+        },
+        {
+            'name': 'firebaseuid',
+            'in': 'query',
+            'required': True,
+            'type': 'string',
+            'description': 'UID de Firebase del usuario que solicita el pedido. El pedido se retornará solo si pertenece al usuario autenticado.'
         }
     ],
     'responses': {
         200: {
-            'description': 'Pedido encontrado',
+            'description': 'Pedido encontrado y pertenece al usuario autenticado',
             'schema': {
                 'type': 'object',
                 'properties': {
                     'pedido_id': {'type': 'integer', 'example': 1},
-                    'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
-                    'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
-                    'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
-                    'estado_pedido': {
+                    'pago_id': {'type': 'string', 'example': 'PAY123'},
+                    'estado': {
                         'type': 'object',
                         'properties': {
                             'estado_pedido_id': {'type': 'integer', 'example': 1},
-                            'nombre': {'type': 'string', 'example': 'Imprimiendo'}
+                            'nombre': {'type': 'string', 'example': 'Pagado'},
+                            'nombre_ingles': {'type': 'string', 'example': 'Paid'}
                         }
                     },
-                    'direccion': {
-                        'type': 'object',
-                        'properties': {
-                            'direccion_id': {'type': 'integer', 'example': 1},
-                            'cedula': {'type': 'string', 'example': '1234567890'},
-                            'nombre_completo': {'type': 'string', 'example': 'John Doe'},
-                            'telefono': {'type': 'string', 'example': '+593999999999'},
-                            'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
-                            'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
-                            'ciudad': {'type': 'string', 'example': 'Springfield'},
-                            'provincia': {'type': 'string', 'example': 'Pichincha'},
-                            'numeracion': {'type': 'string', 'example': '123'},
-                            'referencia': {'type': 'string', 'example': 'Frente al parque'},
-                            'codigo_postal': {'type': 'string', 'example': '170123'}
-                        }
-                    },
+                    'precio': {'type': 'string', 'example': '100.00'},
+                    'precio_final': {'type': 'string', 'example': '112.00'},
                     'impuesto': {
                         'type': 'object',
                         'properties': {
@@ -218,54 +214,160 @@ def get_todos_pedidos():
                             'porcentaje': {'type': 'string', 'example': '15.00'}
                         }
                     },
-                    'usuario_id': {'type': 'integer', 'example': 1},
-                    'pago_id': {'type': 'string', 'example': 'PAY123'},
-                    'precio': {'type': 'string', 'example': '100.00'},
-                    'precio_final': {'type': 'string', 'example': '112.00'},
+                    'valor_impuesto': {'type': 'string', 'example': '15.00'},
+                    'fecha_envio': {'type': 'string', 'example': '2024-12-10T10:00:00'},
+                    'fecha_entrega': {'type': 'string', 'example': '2024-12-12T15:00:00'},
+                    'fecha_pago': {'type': 'string', 'example': '2024-12-10T09:00:00'},
+                    'fecha_creacion': {'type': 'string', 'example': '2024-12-08T15:00:00'},
+                    'direccion': {
+                        'type': 'object',
+                        'properties': {
+                            'nombre_completo': {'type': 'string', 'example': 'John Doe'},
+                            'calle_principal': {'type': 'string', 'example': 'Av. Siempre Viva'},
+                            'calle_secundaria': {'type': 'string', 'example': 'Calle Falsa'},
+                            'ciudad': {'type': 'string', 'example': 'Springfield'},
+                            'provincia': {'type': 'string', 'example': 'Pichincha'},
+                            'numeracion': {'type': 'string', 'example': '123'},
+                            'codigo_postal': {'type': 'string', 'example': '170123'}
+                        }
+                    },
+                    'valor_envio': {'type': 'string', 'example': '2.00'},
                     'productos': {
                         'type': 'array',
                         'items': {
                             'type': 'object',
                             'properties': {
                                 'producto_id': {'type': 'integer', 'example': 1},
-                                'nombre': {'type': 'string', 'example': 'Lámpara Redonda'},
-                                'cantidad': {'type': 'integer', 'example': 2}
+                                'nombre': {'type': 'string', 'example': 'RanpuLamp'},
+                                'precio': {'type': 'string', 'example': '29.99'},
+                                'cantidad': {'type': 'integer', 'example': 2},
+                                'subtotal': {'type': 'string', 'example': '59.98'},
+                                'thumbnail': {'type': 'string', 'example': 'https://example.com/image.jpg'},
+                                'imagenes_ranpulamps': {
+                                    'type': 'array',
+                                    'items': {'type': 'string'},
+                                    'example': [
+                                        'https://example.com/ranpu1.jpg',
+                                        'https://example.com/ranpu2.jpg',
+                                        'https://example.com/ranpu3.jpg',
+                                        'https://example.com/ranpu4.jpg'
+                                    ]
+                                }
                             }
                         }
                     }
                 }
             }
         },
-        404: {'description': 'Pedido no encontrado'}
+        400: {
+            'description': 'Falta el parámetro firebaseuid'
+        },
+        403: {
+            'description': 'El pedido no pertenece al usuario autenticado'
+        },
+        404: {
+            'description': 'Pedido o usuario no encontrado'
+        }
     }
 })
 def get_pedido_por_id(pedido_id):
     """Obtener un pedido por su ID, incluyendo detalles, productos relacionados y usuario asociado."""
+
+    firebase_uid = request.args.get('firebaseuid')
+
+    if not firebase_uid:
+        return jsonify({"message": "El parámetro firebaseuid es obligatorio"}), 400
+
+    usuario = Usuarios.query.filter_by(firebase_uid=firebase_uid).first()
+
+    if not usuario:
+        return jsonify({"message": "Usuario no encontrado"}), 404
+
     pedido = Pedidos.query.get(pedido_id)
     if not pedido:
         return jsonify({"message": "Pedido no encontrado"}), 404
+    
+    # Validar si el pedido pertenece al usuario
+    pertenece_usuario = PedidosUsuario.query.filter_by(
+        pedido_id=pedido_id, usuario_id=usuario.usuario_id
+    ).first()
 
-    productos_pedidos = [
-        {
-            "producto_id": item.producto.producto_id,
-            "nombre": item.producto.nombre,
-            "cantidad": item.cantidad
-        } for item in ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
-    ]
+    if not pertenece_usuario:
+        return jsonify({"message": "No tienes permiso para ver este pedido"}), 403
 
-    usuario_pedido = PedidosUsuario.query.filter_by(pedido_id=pedido.pedido_id).first()
-    usuario_id = usuario_pedido.usuario_id if usuario_pedido else None
+    # Obtener productos del pedido
+    productos_pedidos = ProductosPedidos.query.filter_by(pedido_id=pedido.pedido_id).all()
 
-    response = pedido.to_dict()
-    response.pop("estado_pedido_id", None)
-    response.pop("direccion_id", None)
-    response.pop("impuesto_id", None)
+    productos = []
+    for item in productos_pedidos:
+        producto = item.producto.to_dict()
+        producto_relevante = {
+            "producto_id": producto["producto_id"],
+            "nombre": producto["nombre"],
+            "precio": producto["precio"]
+        }
+        producto_relevante["cantidad"] = item.cantidad
+        producto_relevante["subtotal"] = f"{float(producto['precio']) * item.cantidad:.2f}"
+        thumbnail = next(
+            (
+                img.ubicacion
+                for img in item.producto.imagenes
+                if img.is_thumbnail
+            ),
+            None,
+        )
+        producto_relevante["thumbnail"] = thumbnail
 
-    response["estado_pedido"] = pedido.estado_pedido.to_dict() if pedido.estado_pedido else None
-    response["direccion"] = pedido.direcciones.to_dict() if pedido.direcciones else None
-    response["impuesto"] = pedido.impuesto.to_dict() if pedido.impuesto else None
-    response["productos"] = productos_pedidos
-    response["usuario_id"] = usuario_id
+        # Si es una ranpulamp, obtener las 4 imágenes
+        if item.producto_id == 1:  # 1 es el id de RanpuLamp
+            imagenes_ranpulamps = ImagenesRanpulamps.query.filter_by(
+                producto_pedido_id=item.producto_pedido_id
+            ).all()
+            producto_relevante["imagenes_ranpulamps"] = [
+                imagen.imagen_url for imagen in imagenes_ranpulamps
+            ]
+            
+
+        productos.append(producto_relevante)
+
+    # Calcular el valor del impuesto
+    valor_impuesto = (
+        round(float(pedido.precio) * (float(pedido.impuesto.porcentaje) / 100), 2)
+        if pedido.impuesto
+        else 0.00
+    )
+
+    # Armar la respuesta con los detalles del pedido
+    response = {
+        "pedido_id": pedido.pedido_id,
+        "pago_id": pedido.pago_id if pedido.pago_id else None,
+        "estado": pedido.estado_pedido.to_dict() if pedido.estado_pedido else None,
+        "precio": str(pedido.precio),
+        "precio_final": str(pedido.precio_final),
+        "impuesto": pedido.impuesto.to_dict() if pedido.impuesto else None,
+        "valor_impuesto": str(valor_impuesto),
+        "fecha_envio": pedido.fecha_envio.isoformat() if pedido.fecha_envio else None,
+        "fecha_pago": pedido.fecha_pago.isoformat() if pedido.fecha_pago else None,
+        "fecha_creacion": pedido.fecha_creacion.isoformat()
+        if pedido.fecha_creacion
+        else None,
+        "fecha_entrega": pedido.fecha_entrega.isoformat()
+        if pedido.fecha_entrega
+        else None,
+        "direccion": {
+            "nombre_completo": pedido.direcciones.nombre_completo,
+            "calle_principal": pedido.direcciones.calle_principal,
+            "calle_secundaria": pedido.direcciones.calle_secundaria,
+            "ciudad": pedido.direcciones.ciudad,
+            "provincia": pedido.direcciones.provincia,
+            "numeracion": pedido.direcciones.numeracion,
+            "codigo_postal": pedido.direcciones.codigo_postal,
+        }
+        if pedido.direcciones
+        else None,
+        "valor_envio": "2.00",  # Valor fijo de envío
+        "productos": productos,
+    }
 
     return jsonify(response), 200
 
