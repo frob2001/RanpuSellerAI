@@ -340,7 +340,7 @@ def get_pedido_por_id(pedido_id):
     # Armar la respuesta con los detalles del pedido
     response = {
         "pedido_id": pedido.pedido_id,
-        "pago_id": pedido.pago_id if pedido.pago_id else None,
+        "pago_id": f"{pedido.pago_id[:7]}..." if pedido.pago_id else None,
         "estado": pedido.estado_pedido.to_dict() if pedido.estado_pedido else None,
         "precio": str(pedido.precio),
         "precio_final": str(pedido.precio_final),
