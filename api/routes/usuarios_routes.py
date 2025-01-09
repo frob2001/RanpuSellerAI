@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flasgger import swag_from
+from datetime import datetime, timezone
 from ..models.usuarios import Usuarios
 from ..schemas.usuarios_schema import UsuariosSchema
 from ..database import db
@@ -40,7 +41,7 @@ def get_usuarios():
 @swag_from({
     'tags': ['Usuarios'],
     'summary': 'Crear usuario',
-    'description': 'Crea un nuevo usuario en la base de datos.',
+    'description': 'Crea un nuevo usuario en la base de datos o actualiza la fecha de último inicio de sesión si el usuario ya existe.',
     'parameters': [
         {
             'name': 'body',
@@ -49,7 +50,6 @@ def get_usuarios():
             'schema': {
                 'type': 'object',
                 'properties': {
-                    'usuario_id': {'type': 'integer', 'example': 1},
                     'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'}
                 }
             }
@@ -62,24 +62,58 @@ def get_usuarios():
                 'type': 'object',
                 'properties': {
                     'usuario_id': {'type': 'integer', 'example': 1},
-                    'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'}
+                    'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'},
+                    'ai_gen_tokens': {'type': 'integer', 'example': 2},
+                    'last_login': {'type': 'string', 'example': '2025-01-09T12:00:00'}
                 }
             }
         },
-        400: {'description': 'Error al crear usuario'}
+        200: {
+            'description': 'Usuario ya existe, último inicio de sesión actualizado',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'usuario_id': {'type': 'integer', 'example': 1},
+                    'firebase_uid': {'type': 'string', 'example': 'Alkasdhjaskdj123jk'},
+                    'last_login': {'type': 'string', 'example': '2025-01-09T12:00:00'}
+                }
+            }
+        },
+        400: {'description': 'Error al procesar la solicitud'}
     }
 })
 def create_usuario():
-    """Crear un nuevo usuario"""
+    """Crear un nuevo usuario o actualizar el último inicio de sesión"""
     data = request.get_json()
+    firebase_uid = data.get('firebase_uid')
+
+    if not firebase_uid:
+        return jsonify({"error": "firebase_uid is required."}), 400
+
+    existing_user = Usuarios.query.filter_by(firebase_uid=firebase_uid).first()
+
+    if existing_user:
+        try:
+            existing_user.last_login = datetime.now(timezone.utc)
+            db.session.commit()
+            return jsonify({'message': 'User updated successfully'}), 200
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"error": str(e)}), 400
+
     try:
-        usuario = usuario_schema.load(data, session=db.session)
-        db.session.add(usuario)
+        new_user = Usuarios(
+            firebase_uid=firebase_uid,
+            ai_gen_tokens=2,
+            last_login=datetime.now(timezone.utc)
+        )
+        db.session.add(new_user)
         db.session.commit()
-        return jsonify(usuario_schema.dump(usuario)), 201
+        return jsonify({'message': 'User created successfully'}), 201
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
 
 @usuarios_bp.route('/<int:usuario_id>', methods=['GET'])
 @swag_from({
