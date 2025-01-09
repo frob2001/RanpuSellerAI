@@ -1128,3 +1128,119 @@ def delete_pedido(pedido_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error al eliminar el pedido", "error": str(e)}), 500
+
+@pedidos_bp.route('/update-products', methods=['PUT'], strict_slashes=False)
+@swag_from({
+    'tags': ['Pedidos'],
+    'summary': 'Actualizar productos de un pedido pendiente',
+    'description': 'Actualiza los productos de un pedido pendiente, incluyendo imágenes relacionadas a productos tipo ranpulamp. Obtiene los productos desde Firebase.',
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'usuario_id': {'type': 'integer', 'example': 1}
+                },
+                'required': ['usuario_id']
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Pedido actualizado exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'pedido_id': {'type': 'integer', 'example': 1},
+                    'message': {'type': 'string', 'example': 'Productos actualizados exitosamente'}
+                }
+            }
+        },
+        404: {'description': 'Pedido pendiente no encontrado'},
+        400: {'description': 'Datos inválidos'},
+        500: {'description': 'Error interno del servidor'}
+    }
+})
+def update_order_products():
+    """Actualizar productos de un pedido pendiente."""
+    data = request.get_json()
+
+    usuario_id = data.get('usuario_id')
+
+    # Validate input
+    if not usuario_id:
+        return jsonify({"message": "usuario_id es obligatorio"}), 400
+
+    try:
+        # Find the user
+        user = Usuarios.query.filter_by(firebase_uid=usuario_id).first()
+        if not user:
+            return jsonify({"message": "Usuario no encontrado"}), 404
+
+        # Find the pending order (estado_pedido_id == 8)
+        pending_order = Pedidos.query.filter(
+            Pedidos.pedido_id.in_(
+                [pu.pedido_id for pu in PedidosUsuario.query.filter_by(usuario_id=user.usuario_id).all()]
+            ),
+            Pedidos.estado_pedido_id == 8  # 'Esperando pago'
+        ).first()
+
+        if not pending_order:
+            return jsonify({"message": "No se encontró un pedido pendiente para este usuario"}), 404
+
+        # Fetch the cart from Firebase
+        cart_ref = firebase_db.reference(f'/carts/{usuario_id}')
+        cart_snapshot = cart_ref.get()
+
+        if not cart_snapshot or 'items' not in cart_snapshot or not cart_snapshot['items']:
+            return jsonify({"message": "El carrito está vacío o no existe"}), 400
+
+        cart_items = cart_snapshot['items']
+
+        # Update products in the pending order
+        ProductosPedidos.query.filter_by(pedido_id=pending_order.pedido_id).delete()
+
+        for item in cart_items:
+            producto_id = item.get('databaseProductId')
+            quantity = item.get('quantity')
+
+            if not producto_id or not isinstance(quantity, int) or quantity <= 0:
+                return jsonify({"message": f"ID de producto o cantidad inválida: {item}"}), 400
+
+            producto_pedido = ProductosPedidos(
+                pedido_id=pending_order.pedido_id,
+                producto_id=producto_id,
+                cantidad=quantity
+            )
+            db.session.add(producto_pedido)
+            db.session.flush()
+
+            # Handle ranpulamp images if the product type is ranpulamp
+            if item.get('productType') == 'ranpulamp' and 'croppedImages' in item:
+                cropped_images = item['croppedImages']
+
+                # Delete existing images for this producto_pedido_id
+                ImagenesRanpulamps.query.filter_by(producto_pedido_id=producto_pedido.producto_pedido_id).delete()
+
+                # Add up to 4 new images
+                for image_url in cropped_images[:4]:
+                    new_image = ImagenesRanpulamps(
+                        imagen_url=image_url,
+                        producto_pedido_id=producto_pedido.producto_pedido_id
+                    )
+                    db.session.add(new_image)
+
+        # Commit the changes
+        db.session.commit()
+
+        return jsonify({
+            "pedido_id": pending_order.pedido_id,
+            "message": "Productos actualizados exitosamente"
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": "Error al actualizar los productos", "error": str(e)}), 500
