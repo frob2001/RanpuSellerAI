@@ -11,12 +11,13 @@ from services import (
 )
 from flask_cors import CORS
 import firebase_admin
-from firebase_admin import credentials, db
+from firebase_admin import credentials, db, storage
 
 #FIREBASE
 cred = credentials.Certificate('firebase_account_key.json')
 firebase_admin.initialize_app(cred, {
-    'databaseURL': os.getenv('FIREBASE_DATABASE_URL')
+    'databaseURL': os.getenv('FIREBASE_DATABASE_URL'),
+    'storageBucket': os.getenv('FIREBASE_STORAGE_BUCKET')
 })
 
 #API 
@@ -37,7 +38,8 @@ from api.routes import (
     categorias_filamentos_bp,
     filamentos_bp,
     impresoras_bp,
-    paypal_bp
+    paypal_bp,
+    firebase_images_bp
 )
 
 app = Flask(__name__)
@@ -62,6 +64,7 @@ app.register_blueprint(categorias_filamentos_bp, url_prefix="/api/categorias_fil
 app.register_blueprint(filamentos_bp, url_prefix="/api/filamentos")
 app.register_blueprint(impresoras_bp, url_prefix="/api/impresoras")
 app.register_blueprint(paypal_bp, url_prefix="/api/paypal")
+app.register_blueprint(firebase_images_bp, url_prefix="/api/firebase_images")
 
 # Configuration in production mode
 app.config.from_object(config['production'])

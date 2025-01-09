@@ -29,4 +29,6 @@ class Productos(db.Model):
             "precio": str(self.precio),
             "categoria_producto_id": self.categoria_producto_id,
             "imagenes": [imagen.to_dict() for imagen in self.imagenes],
+            "categoria_producto": self.categoria_producto.nombre,
+            "categoria_producto_id": self.categoria_producto.categoria_producto_id
         }

@@ -304,7 +304,9 @@ def get_pedido_por_id(pedido_id):
         producto_relevante = {
             "producto_id": producto["producto_id"],
             "nombre": producto["nombre"],
-            "precio": producto["precio"]
+            "precio": producto["precio"],
+            "categoria_producto": producto["categoria_producto"],
+            "categoria_producto_id": producto["categoria_producto_id"],
         }
         producto_relevante["cantidad"] = item.cantidad
         producto_relevante["subtotal"] = f"{float(producto['precio']) * item.cantidad:.2f}"
