@@ -228,3 +228,45 @@ def delete_usuario(usuario_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
+
+@usuarios_bp.route('/tokens/<string:firebase_uid>', methods=['GET'])
+@swag_from({
+    'tags': ['Usuarios'],
+    'summary': 'Obtener AI generation tokens de un usuario por su Firebase UID',
+    'description': 'Devuelve la cantidad de `ai_gen_tokens` para un usuario específico identificado por su Firebase UID.',
+    'parameters': [
+        {
+            'name': 'firebase_uid',
+            'in': 'path',
+            'required': True,
+            'type': 'string',
+            'description': 'Firebase UID del usuario'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Cantidad de tokens devuelta exitosamente',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'ai_gen_tokens': {'type': 'integer', 'example': 3}
+                }
+            }
+        },
+        404: {
+            'description': 'Usuario no encontrado en la base de datos'
+        }
+    }
+})
+def get_ai_gen_tokens(firebase_uid):
+    """
+    Obtener la cantidad de AI generation tokens (ai_gen_tokens) de un usuario,
+    buscando por su Firebase UID.
+    """
+    user = Usuarios.query.filter_by(firebase_uid=firebase_uid).first()
+    if not user:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+
+    return jsonify({
+        'ai_gen_tokens': user.ai_gen_tokens
+    }), 200

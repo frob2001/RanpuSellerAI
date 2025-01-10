@@ -39,7 +39,8 @@ from api.routes import (
     filamentos_bp,
     impresoras_bp,
     paypal_bp,
-    firebase_images_bp
+    firebase_images_bp,
+    ai_generation_bp
 )
 
 app = Flask(__name__)
@@ -65,6 +66,7 @@ app.register_blueprint(filamentos_bp, url_prefix="/api/filamentos")
 app.register_blueprint(impresoras_bp, url_prefix="/api/impresoras")
 app.register_blueprint(paypal_bp, url_prefix="/api/paypal")
 app.register_blueprint(firebase_images_bp, url_prefix="/api/firebase_images")
+app.register_blueprint(ai_generation_bp, url_prefix="/api/ai_generation")
 
 # Configuration in production mode
 app.config.from_object(config['production'])
