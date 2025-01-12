@@ -1,10 +1,16 @@
 import os
 import time
 import requests
-from flask import Blueprint, request, jsonify
+from datetime import datetime, timedelta, timezone
+from flask import Blueprint, request, jsonify, make_response, Response
 from flasgger import swag_from
 from ..database import db
 from ..models.usuarios import Usuarios
+from ..models.productos import Productos
+from ..models.detalles_productos_ia import DetallesProductosIA
+import firebase_admin
+from firebase_admin import storage
+
 
 # Create Blueprint
 ai_generation_bp = Blueprint('ai_generation', __name__)
@@ -196,6 +202,17 @@ def generate_3d_model():
     except Exception as ex:
         return jsonify({'error': str(ex)}), 400
 
+def upload_to_firebase(file_content, file_name):
+    """Upload a file to Firebase Storage and return the public URL."""
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"ai-generated-files/{file_name}")
+        blob.upload_from_string(file_content, content_type="model/gltf-binary")
+        blob.make_public()  # Make the file publicly accessible
+        return blob.public_url
+    except Exception as e:
+        raise Exception(f"Failed to upload file to Firebase Storage: {str(e)}")
+
 @ai_generation_bp.route('/finalize-3d-model', methods=['POST'])
 @swag_from({
     'tags': ['AI Generation'],
@@ -257,37 +274,126 @@ def finalize_3d_model():
     data = request.get_json()
     user_id = data.get('user_id')
     job_id = data.get('job_id')
+    nombre = data.get('nombre')
+    detalles = data.get('detalles')
+    generation_type = data.get('generation_type')
 
     # 2. Basic validations
     if not user_id:
         return jsonify({'error': 'user_id is required'}), 400
     if not job_id:
         return jsonify({'error': 'job_id is required'}), 400
+    if not nombre:
+        return jsonify({'error': 'nombre is required'}), 400
+    if not detalles:
+        return jsonify({'error': 'detalles is required'}), 400
+    if not generation_type:
+        return jsonify({'error': 'generation_type is required'}), 400
+    
+    # 3. Check if job_id doesnt already exist
+    existing_detail = DetallesProductosIA.query.filter_by(origin_task_id=job_id).first()
+    if existing_detail:
 
-    # 3. Check if user exists
+        existing_product = Productos.query.filter_by(producto_id=existing_detail.producto_id).first()
+
+        return jsonify({
+            "message": "AI product details already created for this job",
+            "producto_id": existing_product.producto_id,
+            "gbl": existing_product.gbl,
+            'job_id': job_id,
+        }), 200
+
+    # 4. Check if user exists
     user = Usuarios.query.filter_by(firebase_uid=user_id).first()
     if not user:
         return jsonify({"message": "Usuario no encontrado"}), 404
 
-    # 4. Check if user has AI tokens left
+    # 5. Check if user has AI tokens left
     if user.ai_gen_tokens <= 0:
         return jsonify({"message": "Usuario no tiene tokens para generar productos con IA"}), 400
 
-    # 5. Subtract one token from the user
+    # 6. Subtract one token from the user
     user.ai_gen_tokens -= 1
-    db.session.commit()
+    
+    # 7. Get task data
+    if generation_type == 'text':
+        status_url = f'{MESHY_BASE_URL}/v2/text-to-3d/{job_id}'
+    else:  # generation_type == 'image'
+        status_url = f'{MESHY_BASE_URL}/v1/image-to-3d/{job_id}'
 
-    # 6. (Optional) Additional logic goes here:
-    #    - In the future, you could retrieve the final STL/GLB from Meshy.ai
-    #    - Store them in Google Drive, S3, or another storage
-    #    - Update your order or model database with the final file info
-    #    - etc.
+    try:
+        # 1. GET request to Meshy.ai to retrieve the job's current status
+        response = requests.get(status_url, headers=HEADERS, timeout=60)
+        response.raise_for_status()
 
-    # 7. Return success
-    return jsonify({
-        'message': 'Model generation finalized successfully',
-        'job_id': job_id
-    }), 200
+        # 2. Parse the JSON response
+        job_info = response.json()
+        
+        if job_info.get('status') != 'SUCCEEDED':
+            return jsonify({'error': 'Job has not succeeded yet'}), 400
+
+        # Extract URLs from the remesh job
+        glb_url = job_info.get('model_urls', {}).get('glb')
+        obj_url = job_info.get('model_urls', {}).get('obj')
+
+        # Download the GLB file
+        glb_response = requests.get(glb_url)
+        glb_response.raise_for_status()
+
+        if not glb_url or not obj_url:
+            return jsonify({'error': 'Could not retrieve GLB or OBJ URLs'}), 400
+
+        firebase_glb_url = upload_to_firebase(
+            glb_response.content, f"model_{job_id}.glb"
+        )
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as ex:
+        return jsonify({'error': str(ex)}), 400
+
+    # 8. Create a new product
+    new_product = Productos(
+        nombre=nombre,
+        descripcion='Producto generado por IA',
+        alto=None,  # Empty for now
+        ancho=None,  # Empty for now
+        largo=None,  # Empty for now
+        gbl=firebase_glb_url,
+        precio=None,  # Empty for now
+        categoria_producto_id=3  # Fixed category
+    )
+    db.session.add(new_product)
+    db.session.flush()  # Flush to get the new product ID
+
+    # Calculate expiration date (2 days from now)
+    expiration_date = datetime.now(timezone.utc) + timedelta(days=2)
+
+    # 9. Add AI product details
+    ai_product_details = DetallesProductosIA(
+        producto_id=new_product.producto_id,
+        detalles=detalles,
+        time_to_die=expiration_date,
+        is_in_cart=False,
+        is_in_order=False,
+        obj_downloadable_url=obj_url,
+        url_expiring_date=expiration_date,
+        origin_task_id=job_id
+    )
+    db.session.add(ai_product_details)
+
+    # 10. Commit changes to the database
+    try:
+        db.session.commit()
+        return jsonify({
+            "message": "Product and AI details saved successfully",
+            "producto_id": new_product.producto_id,
+            "gbl": firebase_glb_url,
+            'job_id': job_id,
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f"Failed to save product: {str(e)}"}), 500
 
 @ai_generation_bp.route('/get-model-status', methods=['POST'])
 @swag_from({
