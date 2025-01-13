@@ -8,6 +8,8 @@ from ..database import db
 from ..models.usuarios import Usuarios
 from ..models.productos import Productos
 from ..models.detalles_productos_ia import DetallesProductosIA
+from ..models.imagenes_productos import ImagenesProductos
+from ..google_storage_config import GoogleCloudStorageConfig
 import firebase_admin
 from firebase_admin import storage
 
@@ -335,6 +337,7 @@ def finalize_3d_model():
         # Extract URLs from the remesh job
         glb_url = job_info.get('model_urls', {}).get('glb')
         obj_url = job_info.get('model_urls', {}).get('obj')
+        thumbnail_url = job_info.get('thumbnail_url', {}) # Thumbnail image extraction
 
         # Download the GLB file
         glb_response = requests.get(glb_url)
@@ -382,7 +385,43 @@ def finalize_3d_model():
     )
     db.session.add(ai_product_details)
 
-    # 10. Commit changes to the database
+        # 10. Process and save the thumbnail in Google Cloud Storage
+    try:
+        # Download the thumbnail image
+        thumbnail_response = requests.get(thumbnail_url)
+        thumbnail_response.raise_for_status()
+
+        # Initialize Google Cloud Storage
+        gcs_config = GoogleCloudStorageConfig()
+        bucket = gcs_config.get_bucket('ranpuimagesbucket')  # Replace with your bucket name
+
+        # Define folder and file name in the bucket
+        folder_name = str(new_product.producto_id)  # Folder named after producto_id
+        file_name = f"images/{folder_name}/thumbnail_{job_id}.jpg"
+
+        # Upload the thumbnail to Google Cloud Storage
+        blob = bucket.blob(file_name)
+        blob.upload_from_string(thumbnail_response.content, content_type="image/jpeg")
+
+        # Get the public URL of the uploaded thumbnail
+        thumbnail_url_in_bucket = blob.public_url
+
+        # Save the thumbnail URL in the database
+        new_thumbnail = ImagenesProductos(
+            descripcion='Thumbnail generado por IA',
+            ubicacion=thumbnail_url_in_bucket,
+            producto_id=new_product.producto_id,
+            is_thumbnail=True
+        )
+        db.session.add(new_thumbnail)
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f"Failed to download thumbnail: {str(e)}"}), 400
+    except Exception as e:
+        return jsonify({'error': f"Failed to save thumbnail: {str(e)}"}), 500
+
+
+    # 11. Commit changes to the database
     try:
         db.session.commit()
         return jsonify({
@@ -503,3 +542,99 @@ def get_model_status():
     except Exception as ex:
         return jsonify({'error': str(ex)}), 400
 
+@ai_generation_bp.route('/ai-model-polling', methods=['GET'])
+@swag_from({
+    'tags': ['AI Model Polling'],
+    'summary': 'Check if a product has been processed',
+    'description': 'Endpoint to verify whether a product has been processed and has dimensions and price.',
+    'parameters': [
+        {
+            'name': 'producto_id',
+            'in': 'query',
+            'type': 'integer',
+            'required': True,
+            'description': 'The ID of the product to check.'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Returns whether the product has been processed.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'processed': {
+                        'type': 'boolean',
+                        'description': 'True if processed, otherwise False.',
+                        'example': True
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Invalid or missing query parameter.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'producto_id is required'
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'Product not found.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'Producto no encontrado'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': 'Internal server error.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'An error occurred: ...'
+                    }
+                }
+            }
+        }
+    }
+})
+def ai_model_polling():
+    """
+    Endpoint to check if a product has been processed (has dimensions and price).
+    Returns True if processed, otherwise False.
+    """
+    # Get the product_id from query parameters
+    producto_id = request.args.get('producto_id', type=int)
+
+    if not producto_id:
+        return jsonify({"error": "producto_id is required"}), 400
+
+    try:
+        # Query the product by ID
+        producto = Productos.query.filter_by(producto_id=producto_id).first()
+
+        if not producto:
+            return jsonify({"error": "Producto no encontrado"}), 404
+
+        # Check if the product has dimensions and price
+        processed = all([
+            producto.alto is not None,
+            producto.ancho is not None,
+            producto.largo is not None,
+            producto.precio is not None
+        ])
+
+        return jsonify({"processed": processed}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
