@@ -212,8 +212,8 @@ def get_producto_por_id(producto_id):
         if detalles_lamparas else {"producto_id": producto_id, "detalles": None}
     )
     response["detalles_productos_ia"] = (
-        {"producto_id": producto_id, "detalles": detalles_ia.detalles}
-        if detalles_ia else {"producto_id": producto_id, "detalles": None}
+        {"producto_id": producto_id, "detalles": detalles_ia.detalles, "scale": detalles_ia.scale}
+        if detalles_ia else {"producto_id": producto_id, "detalles": None, "scale": None}
     )
 
     response["imagenes"] = [
