@@ -638,3 +638,95 @@ def ai_model_polling():
 
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@ai_generation_bp.route('/ai-rescaling-polling', methods=['GET'])
+@swag_from({
+    'tags': ['AI Rescaling Polling'],
+    'summary': 'Check if a product is being rescaled',
+    'description': 'Endpoint to verify whether a product is currently being rescaled or if the rescaling process has finished.',
+    'parameters': [
+        {
+            'name': 'producto_id',
+            'in': 'query',
+            'type': 'integer',
+            'required': True,
+            'description': 'The ID of the product to check the rescaling status.'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Returns whether the product is being rescaled.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'is_rescaling': {
+                        'type': 'boolean',
+                        'description': 'True if rescaling is in progress, otherwise False.',
+                        'example': True
+                    }
+                }
+            }
+        },
+        400: {
+            'description': 'Invalid or missing query parameter.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'producto_id is required'
+                    }
+                }
+            }
+        },
+        404: {
+            'description': 'Product not found.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'Producto no encontrado'
+                    }
+                }
+            }
+        },
+        500: {
+            'description': 'Internal server error.',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {
+                        'type': 'string',
+                        'example': 'An error occurred: ...'
+                    }
+                }
+            }
+        }
+    }
+})
+def ai_rescaling_polling():
+    """
+    Endpoint to check if a product is currently being rescaled.
+    Returns True if rescaling is in progress, otherwise False.
+    """
+    # Get the producto_id from query parameters
+    producto_id = request.args.get('producto_id', type=int)
+
+    if not producto_id:
+        return jsonify({"error": "producto_id is required"}), 400
+
+    try:
+        # Query the product by ID
+        detalles_producto = DetallesProductosIA.query.filter_by(producto_id=producto_id).first()
+
+        if not detalles_producto:
+            return jsonify({"error": "Producto no encontrado"}), 404
+
+        # Check the is_rescaling field
+        is_rescaling = detalles_producto.is_rescaling
+
+        return jsonify({"is_rescaling": is_rescaling}), 200
+
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500

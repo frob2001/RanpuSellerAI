@@ -12,6 +12,7 @@ class DetallesProductosIA(db.Model):
     url_expiring_date = db.Column(db.DateTime, nullable=True)
     origin_task_id = db.Column(db.String(200), nullable=True)
     scale = db.Column(db.Numeric(5, 2), nullable=False)
+    is_rescaling = db.Column(db.Boolean, nullable=False, default=False)
 
     def to_dict(self):
         return {
@@ -23,5 +24,6 @@ class DetallesProductosIA(db.Model):
             "obj_downloadable_url": self.obj_downloadable_url,
             "url_expiring_date": self.url_expiring_date,
             "origin_task_id": self.origin_task_id,
-            "scale": float(self.scale)
+            "scale": float(self.scale),
+            "is_rescaling": self.is_rescaling
         }
