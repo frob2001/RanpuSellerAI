@@ -13,6 +13,7 @@ from .impresoras_routes import impresoras_bp
 from .paypal_routes import paypal_bp
 from .firebase_images_routes import firebase_images_bp
 from .ai_generation_routes import ai_generation_bp
+from .colores_routes import colors_bp
 
 # Exportamos cada Blueprint explícitamente
-__all__ = ["usuarios_bp", "estados_pedidos_bp", "impuestos_bp", "direcciones_bp", "categorias_productos_bp", "productos_bp", "pedidos_bp", "modelos_bp", "estados_impresoras_bp", "categorias_filamentos_bp", "filamentos_bp", "impresoras_bp", "paypal_bp", "firebase_images_bp", "ai_generation_bp"]
+__all__ = ["usuarios_bp", "estados_pedidos_bp", "impuestos_bp", "direcciones_bp", "categorias_productos_bp", "productos_bp", "pedidos_bp", "modelos_bp", "estados_impresoras_bp", "categorias_filamentos_bp", "filamentos_bp", "impresoras_bp", "paypal_bp", "firebase_images_bp", "ai_generation_bp", "colors_bp"]
