@@ -24,6 +24,7 @@ colors_bp = Blueprint('colors', __name__)
                         'color_id': {'type': 'integer', 'example': 1},
                         'nombre': {'type': 'string', 'example': 'Negro'},
                         'nombre_ingles': {'type': 'string', 'example': 'Black'},
+                        'hexadecimal': {'type': 'string', 'example': '#FFFFFF'},
                         'available': {'type': 'boolean', 'example': True}
                     }
                 }
@@ -72,6 +73,7 @@ def get_available_colors():
                 "color_id": color.color_id,
                 "nombre": color.nombre,
                 "nombre_ingles": color.nombre_ingles,
+                "hexadecimal": color.hexadecimal,
                 "available": available
             })
 
