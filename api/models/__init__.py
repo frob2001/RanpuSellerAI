@@ -18,6 +18,7 @@ from .filamentos import Filamentos
 from .impresoras import Impresoras
 from .filamentos_compatibles import FilamentosCompatibles
 from .imagenes_ranpulamps import ImagenesRanpulamps
+from .colores import Colores
 
 # from .impresion import Impresion
 # from .modelos_impresion import ModelosImpresion
