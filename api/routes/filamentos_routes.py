@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from flasgger import swag_from
 from ..models.filamentos import Filamentos
 from ..schemas.filamentos_schema import FilamentosSchema
+from ..models.colores import Colores
 from ..database import db
 
 # Crear el Blueprint para filamentos

@@ -212,8 +212,8 @@ def get_producto_por_id(producto_id):
         if detalles_lamparas else {"producto_id": producto_id, "detalles": None}
     )
     response["detalles_productos_ia"] = (
-        {"producto_id": producto_id, "detalles": detalles_ia.detalles}
-        if detalles_ia else {"producto_id": producto_id, "detalles": None}
+        {"producto_id": producto_id, "detalles": detalles_ia.detalles, "scale": detalles_ia.scale}
+        if detalles_ia else {"producto_id": producto_id, "detalles": None, "scale": None}
     )
 
     response["imagenes"] = [
@@ -809,3 +809,134 @@ def delete_producto(producto_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": "Error al eliminar el producto", "error": str(e)}), 500
+
+@productos_bp.route('/<int:producto_id>/update-scale', methods=['PUT'])
+@swag_from({
+    'tags': ['Productos'],
+    'summary': 'Actualizar la escala de un producto',
+    'description': 'Actualiza el valor de la escala en la tabla `detalles_productos_ia` para un producto específico. Si también se proporcionan valores para alto, ancho, largo y precio, solo se actualizan los valores y no se marca como en rescalado.',
+    'parameters': [
+        {
+            'name': 'producto_id',
+            'in': 'path',
+            'required': True,
+            'type': 'integer',
+            'description': 'ID del producto para actualizar la escala.'
+        },
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'scale': {'type': 'number', 'example': 1.5, 'description': 'Nuevo valor de escala.'},
+                    'alto': {'type': 'number', 'example': 100.0, 'description': 'Nuevo valor para alto.'},
+                    'ancho': {'type': 'number', 'example': 50.0, 'description': 'Nuevo valor para ancho.'},
+                    'largo': {'type': 'number', 'example': 30.0, 'description': 'Nuevo valor para largo.'},
+                    'precio': {'type': 'number', 'example': 25.5, 'description': 'Nuevo precio.'}
+                },
+                'required': ['scale']
+            }
+        }
+    ],
+    'responses': {
+        200: {'description': 'Escala actualizada correctamente.'},
+        400: {'description': 'Datos inválidos en la solicitud.'},
+        404: {'description': 'Producto no encontrado.'},
+        500: {'description': 'Error interno del servidor.'}
+    }
+})
+def update_scale(producto_id):
+    """
+    Actualizar la escala de un producto.
+    """
+    data = request.get_json()
+
+    # Validar que el campo scale esté presente
+    scale = data.get('scale')
+    if scale is None:
+        return jsonify({"message": "El campo 'scale' es obligatorio."}), 400
+
+    # Validar que scale sea un número con hasta un decimal
+    try:
+        scale = float(scale)
+        if not (scale * 10).is_integer():
+            return jsonify({"message": "El campo 'scale' debe ser un número con hasta una decimal."}), 400
+    except ValueError:
+        return jsonify({"message": "El campo 'scale' debe ser un número válido."}), 400
+
+    # Opcionales
+    alto = data.get('alto')
+    ancho = data.get('ancho')
+    largo = data.get('largo')
+    precio = data.get('precio')
+
+    try:
+        # Buscar el producto en detalles_productos_ia
+        detalles_producto = DetallesProductosIA.query.filter_by(producto_id=producto_id).first()
+        if not detalles_producto:
+            return jsonify({"message": "Detalles de producto ia no encontrados."}), 404
+        
+        producto = Productos.query.filter_by(producto_id=producto_id).first()
+        if not producto:
+            return jsonify({"message": "Producto no encontrado."}), 404
+
+        # Actualizar escala y otros valores si son proporcionados
+        detalles_producto.scale = scale
+
+        # Si alto, ancho, largo, y precio son proporcionados, actualizarlos
+        # y no marcar como en rescalado
+        if alto is not None or ancho is not None or largo is not None or precio is not None:
+            if alto is not None:
+                producto.alto = f"{float(alto):.2f}"
+            if ancho is not None:
+                producto.ancho = f"{float(ancho):.2f}"
+            if largo is not None:
+                producto.largo = f"{float(largo):.2f}"
+            if precio is not None:
+                producto.precio = f"{float(precio):.2f}"
+
+            db.session.commit()
+
+            detalles_catalogo = DetallesCatalogo.query.filter_by(producto_id=producto_id).first()
+            detalles_lamparas = DetallesLamparasRanpu.query.filter_by(producto_id=producto_id).first()
+            detalles_ia = DetallesProductosIA.query.filter_by(producto_id=producto_id).first()
+
+            response = producto.to_dict()
+            response["categoria_producto"] = (
+                producto.categoria_producto.to_dict()
+                if producto.categoria_producto else {"categoria_producto_id": producto.categoria_producto_id, "nombre": None}
+            )
+            response["detalles_catalogo"] = (
+                {"producto_id": producto_id, "detalles": detalles_catalogo.detalles}
+                if detalles_catalogo else {"producto_id": producto_id, "detalles": None}
+            )
+            response["detalles_lamparas_ranpu"] = (
+                {"producto_id": producto_id, "detalles": detalles_lamparas.detalles}
+                if detalles_lamparas else {"producto_id": producto_id, "detalles": None}
+            )
+            response["detalles_productos_ia"] = (
+                {"producto_id": producto_id, "detalles": detalles_ia.detalles, "scale": detalles_ia.scale}
+                if detalles_ia else {"producto_id": producto_id, "detalles": None, "scale": None}
+            )
+            response["imagenes"] = [
+                imagen.to_dict() for imagen in producto.imagenes
+            ]
+
+            return jsonify(response), 200
+        else:
+            # Si solo se actualiza la escala, marcar como en rescalado
+            detalles_producto.is_rescaling = True
+
+            db.session.commit()
+
+            return jsonify({
+                "message": "Solo la escala fue actualizada, corriendo función de rescalado",
+                "producto_id": producto_id,
+            }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"message": f"Error al actualizar los valores: {str(e)}"}), 500
+

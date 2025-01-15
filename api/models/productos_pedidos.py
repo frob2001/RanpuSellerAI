@@ -6,15 +6,18 @@ class ProductosPedidos(db.Model):
     producto_pedido_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     pedido_id = db.Column(db.Integer, db.ForeignKey('pedidos.pedido_id'), nullable=False)
     producto_id = db.Column(db.Integer, db.ForeignKey('productos.producto_id'), nullable=False)
+    color_id = db.Column(db.Integer, db.ForeignKey('colores.color_id'), nullable=True)
     cantidad = db.Column(db.Integer, nullable=False)
 
     pedido = db.relationship('Pedidos', backref=db.backref('productos_pedidos_list', lazy=True))
     producto = db.relationship('Productos', backref=db.backref('productos_pedidos_list', lazy=True))
+    color = db.relationship('Colores', backref=db.backref('productos_pedidos_list', lazy=True))
 
     def to_dict(self):
         return {
             "producto_pedido_id": self.producto_pedido_id,
             "pedido_id": self.pedido_id,
             "producto_id": self.producto_id,
-            "cantidad": self.cantidad
+            "cantidad": self.cantidad,
+            "color": self.color.to_dict() if self.color else None
         }

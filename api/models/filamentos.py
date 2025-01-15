@@ -4,7 +4,6 @@ class Filamentos(db.Model):
     __tablename__ = "filamentos"
 
     filamento_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    color = db.Column(db.String(50), nullable=False)
     marca = db.Column(db.String(50), nullable=False)
     peso_inicial = db.Column(db.Numeric(10, 2), nullable=False)
     peso_actual = db.Column(db.Numeric(10, 2), nullable=False)
@@ -13,14 +12,17 @@ class Filamentos(db.Model):
     precio_compra = db.Column(db.Numeric(10, 2), nullable=False)
     fecha_compra = db.Column(db.DateTime, nullable=False)
     categoria_filamento_id = db.Column(db.Integer, db.ForeignKey('categorias_filamentos.categoria_filamento_id'), nullable=False)
+    color_id = db.Column(db.Integer, db.ForeignKey('colores.color_id'), nullable=False)
 
     # Relaciones
     categoria_filamento = db.relationship('CategoriasFilamentos', backref=db.backref('filamentos', lazy=True))
+    color = db.relationship('Colores', backref=db.backref('filamentos', lazy=True))
 
     def to_dict(self):
         return {
             "filamento_id": self.filamento_id,
-            "color": self.color,
+            "color": self.color.to_dict() if self.color else None,
+            "color_id": self.color_id,
             "marca": self.marca,
             "peso_inicial": str(self.peso_inicial),
             "peso_actual": str(self.peso_actual),

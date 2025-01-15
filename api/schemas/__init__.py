@@ -17,6 +17,7 @@ from .categorias_filamentos_schema import CategoriasFilamentosSchema
 from .filamentos_schema import FilamentosSchema
 from .impresoras_schema import ImpresorasSchema
 from .filamentos_compatibles_schema import FilamentosCompatiblesSchema
+from .colores_schema import ColoresSchema
 
 # from .impresion_schema import ImpresionSchema
 # from .modelos_impresion_schema import ModelosImpresionSchema
