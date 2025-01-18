@@ -212,8 +212,19 @@ def get_producto_por_id(producto_id):
         if detalles_lamparas else {"producto_id": producto_id, "detalles": None}
     )
     response["detalles_productos_ia"] = (
-        {"producto_id": producto_id, "detalles": detalles_ia.detalles, "scale": detalles_ia.scale}
-        if detalles_ia else {"producto_id": producto_id, "detalles": None, "scale": None}
+        {   "producto_id": producto_id, 
+            "detalles": detalles_ia.detalles, 
+            "scale": detalles_ia.scale,
+            "obj_downloadable_url": detalles_ia.obj_downloadable_url,
+            "url_expiring_date": detalles_ia.url_expiring_date
+        }
+        if detalles_ia else {
+            "producto_id": producto_id, 
+            "detalles": None, 
+            "scale": None,
+            "obj_downloadable_url": None,
+            "url_expiring_date": None
+        }
     )
 
     response["imagenes"] = [
