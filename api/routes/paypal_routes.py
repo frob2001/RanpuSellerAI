@@ -165,8 +165,8 @@ def create_order():
 
         subtotal += float(producto.precio) * quantity
 
-    calculated_tax = subtotal * tax_percentage
-    total = subtotal + calculated_tax + delivery_fee
+    calculated_tax = round(subtotal * tax_percentage, 2)
+    total = round(subtotal + calculated_tax + delivery_fee, 2)
 
     # Create PayPal order with calculated total
     try:

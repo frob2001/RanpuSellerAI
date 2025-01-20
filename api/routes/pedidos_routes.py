@@ -14,6 +14,7 @@ from ..models.productos import Productos
 from ..schemas.pedidos_schema import PedidosSchema
 from ..models.usuarios import Usuarios
 from ..models.imagenes_ranpulamps import ImagenesRanpulamps
+from ..models.colores import Colores
 from ..database import db
 
 ECUADOR_TZ = pytz.timezone("America/Guayaquil")
@@ -307,6 +308,10 @@ def get_pedido_por_id(pedido_id):
             "precio": producto["precio"],
             "categoria_producto": producto["categoria_producto"],
             "categoria_producto_id": producto["categoria_producto_id"],
+            "alto": producto["alto"],
+            "ancho": producto["ancho"],
+            "largo": producto["largo"],
+            "gbl": producto["gbl"],
         }
         producto_relevante["cantidad"] = item.cantidad
         producto_relevante["subtotal"] = f"{float(producto['precio']) * item.cantidad:.2f}"
@@ -319,6 +324,10 @@ def get_pedido_por_id(pedido_id):
             None,
         )
         producto_relevante["thumbnail"] = thumbnail
+
+        # Return color object
+        colorObj = Colores.query.filter_by(color_id=item.color_id).first()
+        producto_relevante["color"] = colorObj.to_dict() if colorObj else None
 
         # Si es una ranpulamp, obtener las 4 imágenes
         if item.producto_id == 1:  # 1 es el id de RanpuLamp
@@ -798,6 +807,7 @@ def create_pedido():
                 producto_pedido = ProductosPedidos(
                     pedido_id=existing_pending_pedido.pedido_id,
                     producto_id=item['databaseProductId'],
+                    color_id=item['color']['color_id'] if item.get('color') and 'color_id' in item['color'] else None,
                     cantidad=item['quantity']
                 )
                 db.session.add(producto_pedido)
@@ -869,6 +879,7 @@ def create_pedido():
                 producto_pedido = ProductosPedidos(
                     pedido_id=nuevo_pedido.pedido_id,
                     producto_id=item['databaseProductId'],
+                    color_id=item['color']['color_id'] if item.get('color') and 'color_id' in item['color'] else None,
                     cantidad=item['quantity']
                 )
                 db.session.add(producto_pedido)
