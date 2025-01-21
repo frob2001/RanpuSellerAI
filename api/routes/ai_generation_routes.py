@@ -730,3 +730,81 @@ def ai_rescaling_polling():
 
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@ai_generation_bp.route('/upload-glb', methods=['POST'])
+@swag_from({
+    'tags': ['Firebase Storage'],
+    'summary': 'Upload a .glb file to Firebase Storage',
+    'description': (
+        'Uploads a .glb file to a specified folder structure in Firebase Storage. '
+        'You can specify the folder path (e.g., catalog-files/nami-akari/) dynamically.'
+    ),
+    'parameters': [
+        {
+            'name': 'folder_path',
+            'in': 'query',
+            'type': 'string',
+            'required': True,
+            'description': 'The folder structure where the file should be uploaded (e.g., catalog-files/nami-akari/).'
+        },
+        {
+            'name': 'file',
+            'in': 'formData',
+            'type': 'file',
+            'required': True,
+            'description': 'The .glb file to be uploaded.'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'File uploaded successfully',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string'},
+                    'file_url': {'type': 'string', 'description': 'Public URL of the uploaded file.'}
+                }
+            }
+        },
+        400: {
+            'description': 'Invalid input or upload failed',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'error': {'type': 'string'}
+                }
+            }
+        }
+    }
+})
+def upload_glb():
+    """
+    Upload a .glb file to Firebase Storage in a specified folder structure.
+    """
+    folder_path = request.args.get('folder_path')
+    file = request.files.get('file')
+
+    # Validate input
+    if not folder_path:
+        return jsonify({'error': 'folder_path query parameter is required'}), 400
+    if not file:
+        return jsonify({'error': 'A .glb file is required'}), 400
+    if not file.filename.endswith('.glb'):
+        return jsonify({'error': 'The uploaded file must have a .glb extension'}), 400
+
+    # Upload file to Firebase Storage
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"{folder_path}{file.filename}")  # Combine folder path and file name
+        blob.upload_from_file(file, content_type="model/gltf-binary")  # Specify correct MIME type
+        blob.make_public()  # Make the file publicly accessible
+
+        # Generate public URL
+        file_url = blob.public_url
+        return jsonify({
+            'message': 'File uploaded successfully',
+            'file_url': file_url
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f"Failed to upload file: {str(e)}"}), 500

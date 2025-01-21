@@ -951,3 +951,114 @@ def update_scale(producto_id):
         db.session.rollback()
         return jsonify({"message": f"Error al actualizar los valores: {str(e)}"}), 500
 
+@productos_bp.route('/catalog', methods=['GET'])
+@swag_from({
+    'tags': ['Productos'],
+    'summary': 'Fetch catalog products with search and pagination',
+    'description': (
+        'Returns a list of catalog products (categoria_producto_id = 4) with optional filters for search (name/description) '
+        'and pagination (page and per_page).'
+    ),
+    'parameters': [
+        {
+            'name': 'search',
+            'in': 'query',
+            'type': 'string',
+            'description': 'Search term to filter by product name or description. If not provided, all catalog products are returned.'
+        },
+        {
+            'name': 'page',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Page number for pagination. Defaults to 1.'
+        },
+        {
+            'name': 'per_page',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Number of products per page. Defaults to 10.'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'List of catalog products',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'products': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'Catalog Lamp'},
+                                'descripcion': {'type': 'string', 'example': 'A modern catalog lamp with Wi-Fi.'},
+                                'alto': {'type': 'string', 'example': '12.00'},
+                                'ancho': {'type': 'string', 'example': '6.00'},
+                                'largo': {'type': 'string', 'example': '9.00'},
+                                'gbl': {'type': 'string', 'example': 'path/to/file.gbl'},
+                                'precio': {'type': 'string', 'example': '29.99'},
+                                'categoria_producto': {'type': 'string', 'example': 'Catalog Products'},
+                                'imagenes': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'object',
+                                        'properties': {
+                                            'imagen_producto_id': {'type': 'integer', 'example': 1},
+                                            'descripcion': {'type': 'string', 'example': 'Front view'},
+                                            'ubicacion': {'type': 'string', 'example': '/images/product1_front.jpg'}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    'total_items': {'type': 'integer', 'example': 100},
+                    'total_pages': {'type': 'integer', 'example': 10},
+                    'current_page': {'type': 'integer', 'example': 1},
+                    'per_page': {'type': 'integer', 'example': 10}
+                }
+            }
+        }
+    }
+})
+def get_catalog_products():
+    """Fetch catalog products with optional search and pagination."""
+    search = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    query = Productos.query.filter(Productos.categoria_producto_id == 4)
+
+    if search:
+        query = query.filter(
+            db.or_(
+                Productos.nombre.ilike(f"%{search}%"),
+                Productos.descripcion.ilike(f"%{search}%")
+            )
+        )
+
+    paginated_products = query.paginate(page=page, per_page=per_page, error_out=False)
+    products = paginated_products.items
+
+    if not products:
+        return jsonify({
+            "products": [],
+            "total_items": 0,
+            "total_pages": 0,
+            "current_page": page,
+            "per_page": per_page
+        }), 200
+
+    result = []
+    for product in products:
+        result.append(product.to_dict())
+
+    return jsonify({
+        "products": result,
+        "total_items": paginated_products.total,
+        "total_pages": paginated_products.pages,
+        "current_page": paginated_products.page,
+        "per_page": paginated_products.per_page
+    }), 200
+
