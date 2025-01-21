@@ -7,6 +7,7 @@ from ..models.detalles_lamparas_ranpu import DetallesLamparasRanpu
 from ..models.detalles_productos_ia import DetallesProductosIA
 from ..models.imagenes_productos import ImagenesProductos
 from ..models.impuestos import Impuestos
+from ..models.modelos import Modelos
 from ..database import db
 
 productos_bp = Blueprint('productos', __name__)
@@ -197,8 +198,32 @@ def get_producto_por_id(producto_id):
     detalles_catalogo = DetallesCatalogo.query.filter_by(producto_id=producto_id).first()
     detalles_lamparas = DetallesLamparasRanpu.query.filter_by(producto_id=producto_id).first()
     detalles_ia = DetallesProductosIA.query.filter_by(producto_id=producto_id).first()
-
+    modelos = Modelos.query.filter_by(producto_id=producto_id).all()
+    
     response = producto.to_dict()
+    if modelos:
+        tiempo_estimado_impresion = sum(
+            modelo.tiempo_estimado.total_seconds() for modelo in modelos if modelo.tiempo_estimado is not None
+        )
+        days, remainder = divmod(tiempo_estimado_impresion, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        tiempo_estimado_str = ""
+        if days > 0:
+            tiempo_estimado_str += f"{int(days)}d "
+        if hours > 0:
+            tiempo_estimado_str += f"{int(hours)}h "
+        if minutes > 0:
+            tiempo_estimado_str += f"{int(minutes)}m"
+
+        response["tiempo_estimado_impresion"] = tiempo_estimado_str.strip()
+
+        peso_estimado_gramos = sum(
+            modelo.peso_estimado_gramos or 0 for modelo in modelos
+        )
+        response["peso_estimado"] = peso_estimado_gramos
+
     response["categoria_producto"] = (
         producto.categoria_producto.to_dict()
         if producto.categoria_producto else {"categoria_producto_id": producto.categoria_producto_id, "nombre": None}
