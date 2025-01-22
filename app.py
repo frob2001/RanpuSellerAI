@@ -47,7 +47,7 @@ from api.routes import (
 app = Flask(__name__)
 
 # Configuración de CORS
-CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}})
+CORS(app, resources={r"/*": {"origins": ["https://ranpuoficial.com", "https://ranpusellsapp.onrender.com"], "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]}})
 
 init_db(app)
 init_swagger(app)
