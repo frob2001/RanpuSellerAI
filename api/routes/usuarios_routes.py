@@ -5,6 +5,10 @@ from ..models.usuarios import Usuarios
 from ..schemas.usuarios_schema import UsuariosSchema
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+from api.middlewares.firebase_auth_middleware import firebase_auth_required
+
 usuarios_bp = Blueprint('usuarios', __name__)
 
 # Instancia del esquema
@@ -12,6 +16,8 @@ usuario_schema = UsuariosSchema()
 usuarios_schema = UsuariosSchema(many=True)
 
 @usuarios_bp.route('/', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Usuarios'],
     'summary': 'Listar usuarios',
@@ -38,6 +44,8 @@ def get_usuarios():
     return jsonify(usuarios_schema.dump(usuarios)), 200
 
 @usuarios_bp.route('/', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Usuarios'],
     'summary': 'Crear usuario',
@@ -114,8 +122,9 @@ def create_usuario():
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
 
-
 @usuarios_bp.route('/<int:usuario_id>', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Usuarios'],
     'summary': 'Obtener usuario',
@@ -149,6 +158,8 @@ def get_usuario(usuario_id):
     return jsonify(usuario_schema.dump(usuario)), 200
 
 @usuarios_bp.route('/<int:usuario_id>', methods=['PUT'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Usuarios'],
     'summary': 'Actualizar usuario',
@@ -200,6 +211,8 @@ def update_usuario(usuario_id):
         return jsonify({"error": str(e)}), 400
 
 @usuarios_bp.route('/<int:usuario_id>', methods=['DELETE'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Usuarios'],
     'summary': 'Eliminar usuario',
@@ -230,6 +243,8 @@ def delete_usuario(usuario_id):
         return jsonify({"error": str(e)}), 400
 
 @usuarios_bp.route('/tokens/<string:firebase_uid>', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Usuarios'],
     'summary': 'Obtener AI generation tokens de un usuario por su Firebase UID',
