@@ -4,6 +4,9 @@ from ..models.impresoras import Impresoras
 from ..schemas.impresoras_schema import ImpresorasSchema
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 # Crear el Blueprint para impresoras
 impresoras_bp = Blueprint('impresoras', __name__)
 
@@ -12,6 +15,7 @@ impresora_schema = ImpresorasSchema()
 impresoras_schema = ImpresorasSchema(many=True)
 
 @impresoras_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Impresoras'],
     'summary': 'Obtener todas las impresoras',
@@ -65,8 +69,8 @@ def get_todas_impresoras():
         result.append(data)
     return jsonify(result), 200
 
-
 @impresoras_bp.route('/<int:impresora_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Impresoras'],
     'summary': 'Obtener una impresora por ID',
@@ -126,9 +130,8 @@ def get_impresora_por_id(impresora_id):
     data['filamento'] = impresora.filamento.to_dict() if impresora.filamento else None
     return jsonify(data), 200
 
-
-
 @impresoras_bp.route('/', methods=['POST'])
+@validate_origin()
 @swag_from({
     'tags': ['Impresoras'],
     'summary': 'Crear una nueva impresora',
@@ -201,8 +204,8 @@ def create_impresora():
         db.session.rollback()
         return jsonify({"message": "Error al crear la impresora", "error": str(e)}), 500
 
-
 @impresoras_bp.route('/<int:impresora_id>', methods=['PUT'])
+@validate_origin()
 @swag_from({
     'tags': ['Impresoras'],
     'summary': 'Actualizar una impresora',
@@ -264,8 +267,8 @@ def update_impresora(impresora_id):
         db.session.rollback()
         return jsonify({"message": "Error al actualizar la impresora", "error": str(e)}), 500
 
-
 @impresoras_bp.route('/<int:impresora_id>', methods=['DELETE'])
+@validate_origin()
 @swag_from({
     'tags': ['Impresoras'],
     'summary': 'Eliminar una impresora',

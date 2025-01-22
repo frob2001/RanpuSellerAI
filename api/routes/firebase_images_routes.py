@@ -4,10 +4,14 @@ from firebase_admin import storage
 from urllib.parse import urlparse, parse_qs, unquote
 import datetime
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 # Crear el Blueprint para firebase_images
 firebase_images_bp = Blueprint('firebase_images', __name__)
 
 @firebase_images_bp.route('/get_signed_url', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Firebase Images'],
     'summary': 'Obtener una URL firmada para acceder a una imagen en Firebase Storage.',

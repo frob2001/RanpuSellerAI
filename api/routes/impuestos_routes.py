@@ -4,6 +4,9 @@ from ..models.impuestos import Impuestos
 from ..schemas.impuestos_schema import ImpuestosSchema
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 impuestos_bp = Blueprint('impuestos', __name__)
 
 # Instancias de los schemas
@@ -11,6 +14,7 @@ impuestos_schema = ImpuestosSchema()
 multiple_impuestos_schema = ImpuestosSchema(many=True)
 
 @impuestos_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Impuestos'],
     'summary': 'Listar impuestos',
@@ -39,6 +43,7 @@ def get_impuestos():
     return jsonify(multiple_impuestos_schema.dump(impuestos)), 200
 
 @impuestos_bp.route('/', methods=['POST'])
+@validate_origin()
 @swag_from({
     'tags': ['Impuestos'],
     'summary': 'Crear impuesto',
@@ -90,6 +95,7 @@ def create_impuesto():
         return jsonify({"error": str(e)}), 400
 
 @impuestos_bp.route('/<int:impuesto_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Impuestos'],
     'summary': 'Obtener impuesto',
@@ -124,6 +130,7 @@ def get_impuesto(impuesto_id):
     return jsonify(impuestos_schema.dump(impuesto)), 200
 
 @impuestos_bp.route('/<int:impuesto_id>', methods=['PUT'])
+@validate_origin()
 @swag_from({
     'tags': ['Impuestos'],
     'summary': 'Actualizar impuesto',
@@ -182,6 +189,7 @@ def update_impuesto(impuesto_id):
         return jsonify({"error": str(e)}), 400
 
 @impuestos_bp.route('/<int:impuesto_id>', methods=['DELETE'])
+@validate_origin()
 @swag_from({
     'tags': ['Impuestos'],
     'summary': 'Eliminar impuesto',
@@ -212,6 +220,7 @@ def delete_impuesto(impuesto_id):
         return jsonify({"error": str(e)}), 400
     
 @impuestos_bp.route('/<int:impuesto_id>/activate', methods=['PATCH'])
+@validate_origin()
 @swag_from({
     'tags': ['Impuestos'],
     'summary': 'Activar impuesto',

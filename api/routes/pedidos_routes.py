@@ -17,6 +17,10 @@ from ..models.imagenes_ranpulamps import ImagenesRanpulamps
 from ..models.colores import Colores
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+from api.middlewares.firebase_auth_middleware import firebase_auth_required
+
 ECUADOR_TZ = pytz.timezone("America/Guayaquil")
 MONTHS_ES = [
     "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -65,6 +69,8 @@ def format_date_english(dt: datetime) -> str:
     return f"{month} {day}, {year}"
 
 @pedidos_bp.route('/', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener todos los pedidos',
@@ -165,6 +171,8 @@ def get_todos_pedidos():
     return jsonify(response), 200
 
 @pedidos_bp.route('/<int:pedido_id>', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener un pedido por ID si pertenece al usuario autenticado',
@@ -383,6 +391,8 @@ def get_pedido_por_id(pedido_id):
     return jsonify(response), 200
 
 @pedidos_bp.route('/usuario/<string:usuario_id>', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Obtener pedidos por ID de usuario (con filtros y paginación)',
@@ -607,6 +617,8 @@ def get_pedidos_por_usuario(usuario_id):
     }), 200
 
 @pedidos_bp.route('', methods=['POST'], strict_slashes=False)
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Crear un nuevo pedido con dirección y usuario',
@@ -912,6 +924,8 @@ def create_pedido():
         return jsonify({"message": "Error al crear el pedido", "error": str(e)}), 500
 
 @pedidos_bp.route('/<int:pedido_id>', methods=['PUT'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Actualizar un pedido existente',
@@ -1074,6 +1088,8 @@ def update_pedido(pedido_id):
         return jsonify({"message": "Error al actualizar el pedido", "error": str(e)}), 500
 
 @pedidos_bp.route('/<int:pedido_id>', methods=['DELETE'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Eliminar un pedido existente',
@@ -1141,6 +1157,8 @@ def delete_pedido(pedido_id):
         return jsonify({"message": "Error al eliminar el pedido", "error": str(e)}), 500
 
 @pedidos_bp.route('/update-products', methods=['PUT'], strict_slashes=False)
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Pedidos'],
     'summary': 'Actualizar productos de un pedido pendiente',

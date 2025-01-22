@@ -4,6 +4,10 @@ from ..models.estados_pedidos import EstadosPedidos
 from ..schemas.estados_pedidos_schema import EstadosPedidosSchema
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+from api.middlewares.firebase_auth_middleware import firebase_auth_required
+
 estados_pedidos_bp = Blueprint('estados_pedidos', __name__)
 
 # Instancias de los schemas
@@ -11,6 +15,8 @@ estados_pedidos_schema = EstadosPedidosSchema()
 multiple_estados_pedidos_schema = EstadosPedidosSchema(many=True)
 
 @estados_pedidos_bp.route('/', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['EstadosPedidos'],
     'summary': 'Listar estados de pedidos',
@@ -39,6 +45,8 @@ def get_estados_pedidos():
     return jsonify(multiple_estados_pedidos_schema.dump(estados)), 200
 
 @estados_pedidos_bp.route('/', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['EstadosPedidos'],
     'summary': 'Crear estado de pedido',
@@ -83,6 +91,8 @@ def create_estado_pedido():
         return jsonify({"error": str(e)}), 400
 
 @estados_pedidos_bp.route('/<int:estado_pedido_id>', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['EstadosPedidos'],
     'summary': 'Obtener estado de pedido',
@@ -116,6 +126,8 @@ def get_estado_pedido(estado_pedido_id):
     return jsonify(estados_pedidos_schema.dump(estado)), 200
 
 @estados_pedidos_bp.route('/<int:estado_pedido_id>', methods=['PUT'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['EstadosPedidos'],
     'summary': 'Actualizar estado de pedido',
@@ -167,6 +179,8 @@ def update_estado_pedido(estado_pedido_id):
         return jsonify({"error": str(e)}), 400
 
 @estados_pedidos_bp.route('/<int:estado_pedido_id>', methods=['DELETE'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['EstadosPedidos'],
     'summary': 'Eliminar estado de pedido',

@@ -3,9 +3,13 @@ from flasgger import swag_from
 from ..models.categorias_productos import CategoriasProductos
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 categorias_productos_bp = Blueprint('categorias_productos', __name__)
 
 @categorias_productos_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasProductos'],
     'summary': 'Listar categorías de productos',
@@ -32,6 +36,7 @@ def get_categorias_productos():
     return jsonify([categoria.to_dict() for categoria in categorias]), 200
 
 @categorias_productos_bp.route('/<int:categoria_producto_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasProductos'],
     'summary': 'Obtener categoría de producto',
@@ -65,6 +70,7 @@ def get_categoria_producto(categoria_producto_id):
     return jsonify(categoria.to_dict()), 200
 
 @categorias_productos_bp.route('/', methods=['POST'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasProductos'],
     'summary': 'Crear categoría de producto',
@@ -109,6 +115,7 @@ def create_categoria_producto():
         return jsonify({"error": str(e)}), 400
 
 @categorias_productos_bp.route('/<int:categoria_producto_id>', methods=['PUT'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasProductos'],
     'summary': 'Actualizar categoría de producto',
@@ -151,6 +158,7 @@ def update_categoria_producto(categoria_producto_id):
         return jsonify({"error": str(e)}), 400
 
 @categorias_productos_bp.route('/<int:categoria_producto_id>', methods=['DELETE'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasProductos'],
     'summary': 'Eliminar categoría de producto',
