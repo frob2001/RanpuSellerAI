@@ -16,7 +16,6 @@ multiple_estados_pedidos_schema = EstadosPedidosSchema(many=True)
 
 @estados_pedidos_bp.route('/', methods=['GET'])
 @validate_origin()
-@firebase_auth_required
 @swag_from({
     'tags': ['EstadosPedidos'],
     'summary': 'Listar estados de pedidos',
