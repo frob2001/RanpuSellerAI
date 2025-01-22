@@ -5,6 +5,9 @@ from ..schemas.filamentos_schema import FilamentosSchema
 from ..models.colores import Colores
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 # Crear el Blueprint para filamentos
 filamentos_bp = Blueprint('filamentos', __name__)
 
@@ -13,6 +16,7 @@ filamento_schema = FilamentosSchema()
 filamentos_schema = FilamentosSchema(many=True)
 
 @filamentos_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Filamentos'],
     'summary': 'Obtener todos los filamentos',
@@ -46,8 +50,8 @@ def get_todos_filamentos():
     filamentos = Filamentos.query.all()
     return jsonify(filamentos_schema.dump(filamentos)), 200
 
-
 @filamentos_bp.route('/<int:filamento_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Filamentos'],
     'summary': 'Obtener un filamento por ID',
@@ -73,8 +77,8 @@ def get_filamento_por_id(filamento_id):
         return jsonify({"message": "Filamento no encontrado"}), 404
     return jsonify(filamento_schema.dump(filamento)), 200
 
-
 @filamentos_bp.route('/', methods=['POST'])
+@validate_origin()
 @swag_from({
     'tags': ['Filamentos'],
     'summary': 'Crear un nuevo filamento',
@@ -145,8 +149,8 @@ def create_filamento():
         db.session.rollback()
         return jsonify({"message": "Error al crear el filamento", "error": str(e)}), 500
 
-
 @filamentos_bp.route('/<int:filamento_id>', methods=['PUT'])
+@validate_origin()
 @swag_from({
     'tags': ['Filamentos'],
     'summary': 'Actualizar un filamento',
@@ -207,8 +211,8 @@ def update_filamento(filamento_id):
         db.session.rollback()
         return jsonify({"message": "Error al actualizar el filamento", "error": str(e)}), 500
 
-
 @filamentos_bp.route('/<int:filamento_id>', methods=['DELETE'])
+@validate_origin()
 @swag_from({
     'tags': ['Filamentos'],
     'summary': 'Eliminar un filamento',
