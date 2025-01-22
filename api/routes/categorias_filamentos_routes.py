@@ -4,6 +4,9 @@ from ..models.categorias_filamentos import CategoriasFilamentos
 from ..schemas.categorias_filamentos_schema import CategoriasFilamentosSchema
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 # Crear el Blueprint para categorias_filamentos
 categorias_filamentos_bp = Blueprint('categorias_filamentos', __name__)
 
@@ -12,6 +15,7 @@ categoria_filamento_schema = CategoriasFilamentosSchema()
 categorias_filamentos_schema = CategoriasFilamentosSchema(many=True)
 
 @categorias_filamentos_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasFilamentos'],
     'summary': 'Obtener todas las categorías de filamentos',
@@ -45,8 +49,8 @@ def get_todas_categorias_filamentos():
     categorias = CategoriasFilamentos.query.all()
     return jsonify(categorias_filamentos_schema.dump(categorias)), 200
 
-
 @categorias_filamentos_bp.route('/<int:categoria_filamento_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasFilamentos'],
     'summary': 'Obtener una categoría de filamento por ID',
@@ -73,6 +77,7 @@ def get_categoria_filamento_por_id(categoria_filamento_id):
     return jsonify(categoria_filamento_schema.dump(categoria)), 200
 
 @categorias_filamentos_bp.route('/', methods=['POST'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasFilamentos'],
     'summary': 'Crear una nueva categoría de filamento',
@@ -143,6 +148,7 @@ def create_categoria_filamento():
         return jsonify({"message": "Error al crear la categoría de filamento", "error": str(e)}), 500
     
 @categorias_filamentos_bp.route('/<int:categoria_filamento_id>', methods=['PUT'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasFilamentos'],
     'summary': 'Actualizar una categoría de filamento',
@@ -203,8 +209,8 @@ def update_categoria_filamento(categoria_filamento_id):
         db.session.rollback()
         return jsonify({"message": "Error al actualizar la categoría de filamento", "error": str(e)}), 500
 
-
 @categorias_filamentos_bp.route('/<int:categoria_filamento_id>', methods=['DELETE'])
+@validate_origin()
 @swag_from({
     'tags': ['CategoriasFilamentos'],
     'summary': 'Eliminar una categoría de filamento',
