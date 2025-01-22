@@ -7,6 +7,7 @@ from ..models.detalles_lamparas_ranpu import DetallesLamparasRanpu
 from ..models.detalles_productos_ia import DetallesProductosIA
 from ..models.imagenes_productos import ImagenesProductos
 from ..models.impuestos import Impuestos
+from ..models.modelos import Modelos
 from ..database import db
 
 productos_bp = Blueprint('productos', __name__)
@@ -197,8 +198,32 @@ def get_producto_por_id(producto_id):
     detalles_catalogo = DetallesCatalogo.query.filter_by(producto_id=producto_id).first()
     detalles_lamparas = DetallesLamparasRanpu.query.filter_by(producto_id=producto_id).first()
     detalles_ia = DetallesProductosIA.query.filter_by(producto_id=producto_id).first()
-
+    modelos = Modelos.query.filter_by(producto_id=producto_id).all()
+    
     response = producto.to_dict()
+    if modelos:
+        tiempo_estimado_impresion = sum(
+            modelo.tiempo_estimado.total_seconds() for modelo in modelos if modelo.tiempo_estimado is not None
+        )
+        days, remainder = divmod(tiempo_estimado_impresion, 86400)
+        hours, remainder = divmod(remainder, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        tiempo_estimado_str = ""
+        if days > 0:
+            tiempo_estimado_str += f"{int(days)}d "
+        if hours > 0:
+            tiempo_estimado_str += f"{int(hours)}h "
+        if minutes > 0:
+            tiempo_estimado_str += f"{int(minutes)}m"
+
+        response["tiempo_estimado_impresion"] = tiempo_estimado_str.strip()
+
+        peso_estimado_gramos = sum(
+            modelo.peso_estimado_gramos or 0 for modelo in modelos
+        )
+        response["peso_estimado"] = peso_estimado_gramos
+
     response["categoria_producto"] = (
         producto.categoria_producto.to_dict()
         if producto.categoria_producto else {"categoria_producto_id": producto.categoria_producto_id, "nombre": None}
@@ -212,8 +237,19 @@ def get_producto_por_id(producto_id):
         if detalles_lamparas else {"producto_id": producto_id, "detalles": None}
     )
     response["detalles_productos_ia"] = (
-        {"producto_id": producto_id, "detalles": detalles_ia.detalles, "scale": detalles_ia.scale}
-        if detalles_ia else {"producto_id": producto_id, "detalles": None, "scale": None}
+        {   "producto_id": producto_id, 
+            "detalles": detalles_ia.detalles, 
+            "scale": detalles_ia.scale,
+            "obj_downloadable_url": detalles_ia.obj_downloadable_url,
+            "url_expiring_date": detalles_ia.url_expiring_date
+        }
+        if detalles_ia else {
+            "producto_id": producto_id, 
+            "detalles": None, 
+            "scale": None,
+            "obj_downloadable_url": None,
+            "url_expiring_date": None
+        }
     )
 
     response["imagenes"] = [
@@ -939,4 +975,115 @@ def update_scale(producto_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Error al actualizar los valores: {str(e)}"}), 500
+
+@productos_bp.route('/catalog', methods=['GET'])
+@swag_from({
+    'tags': ['Productos'],
+    'summary': 'Fetch catalog products with search and pagination',
+    'description': (
+        'Returns a list of catalog products (categoria_producto_id = 4) with optional filters for search (name/description) '
+        'and pagination (page and per_page).'
+    ),
+    'parameters': [
+        {
+            'name': 'search',
+            'in': 'query',
+            'type': 'string',
+            'description': 'Search term to filter by product name or description. If not provided, all catalog products are returned.'
+        },
+        {
+            'name': 'page',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Page number for pagination. Defaults to 1.'
+        },
+        {
+            'name': 'per_page',
+            'in': 'query',
+            'type': 'integer',
+            'description': 'Number of products per page. Defaults to 10.'
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'List of catalog products',
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'products': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'producto_id': {'type': 'integer', 'example': 1},
+                                'nombre': {'type': 'string', 'example': 'Catalog Lamp'},
+                                'descripcion': {'type': 'string', 'example': 'A modern catalog lamp with Wi-Fi.'},
+                                'alto': {'type': 'string', 'example': '12.00'},
+                                'ancho': {'type': 'string', 'example': '6.00'},
+                                'largo': {'type': 'string', 'example': '9.00'},
+                                'gbl': {'type': 'string', 'example': 'path/to/file.gbl'},
+                                'precio': {'type': 'string', 'example': '29.99'},
+                                'categoria_producto': {'type': 'string', 'example': 'Catalog Products'},
+                                'imagenes': {
+                                    'type': 'array',
+                                    'items': {
+                                        'type': 'object',
+                                        'properties': {
+                                            'imagen_producto_id': {'type': 'integer', 'example': 1},
+                                            'descripcion': {'type': 'string', 'example': 'Front view'},
+                                            'ubicacion': {'type': 'string', 'example': '/images/product1_front.jpg'}
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    'total_items': {'type': 'integer', 'example': 100},
+                    'total_pages': {'type': 'integer', 'example': 10},
+                    'current_page': {'type': 'integer', 'example': 1},
+                    'per_page': {'type': 'integer', 'example': 10}
+                }
+            }
+        }
+    }
+})
+def get_catalog_products():
+    """Fetch catalog products with optional search and pagination."""
+    search = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    query = Productos.query.filter(Productos.categoria_producto_id == 4)
+
+    if search:
+        query = query.filter(
+            db.or_(
+                Productos.nombre.ilike(f"%{search}%"),
+                Productos.descripcion.ilike(f"%{search}%")
+            )
+        )
+
+    paginated_products = query.paginate(page=page, per_page=per_page, error_out=False)
+    products = paginated_products.items
+
+    if not products:
+        return jsonify({
+            "products": [],
+            "total_items": 0,
+            "total_pages": 0,
+            "current_page": page,
+            "per_page": per_page
+        }), 200
+
+    result = []
+    for product in products:
+        result.append(product.to_dict())
+
+    return jsonify({
+        "products": result,
+        "total_items": paginated_products.total,
+        "total_pages": paginated_products.pages,
+        "current_page": paginated_products.page,
+        "per_page": paginated_products.per_page
+    }), 200
 
