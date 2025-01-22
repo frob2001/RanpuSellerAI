@@ -10,9 +10,14 @@ from ..models.impuestos import Impuestos
 from ..models.modelos import Modelos
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+from api.middlewares.firebase_auth_middleware import firebase_auth_required
+
 productos_bp = Blueprint('productos', __name__)
 
 @productos_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Obtener todos los productos',
@@ -116,6 +121,7 @@ def get_productos():
     return jsonify(resultado), 200
 
 @productos_bp.route('/<int:producto_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Obtener un producto por ID',
@@ -259,6 +265,8 @@ def get_producto_por_id(producto_id):
     return jsonify(response), 200
 
 @productos_bp.route('/', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Crear un nuevo producto con detalles e imágenes relacionadas',
@@ -422,6 +430,8 @@ def create_producto():
         return jsonify({"message": "Error al crear el producto", "error": str(e)}), 500
 
 @productos_bp.route('/cart', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Obtener múltiples productos por sus IDs',
@@ -560,6 +570,8 @@ def get_productos_por_ids():
     return jsonify(resultado), 200
 
 @productos_bp.route('/calculate_total', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Calcular el total de una transacción',
@@ -653,6 +665,8 @@ def calculate_total():
     }), 200
 
 @productos_bp.route('/<int:producto_id>', methods=['PUT'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Actualizar un producto existente',
@@ -802,6 +816,8 @@ def update_producto(producto_id):
         return jsonify({"message": "Error al actualizar el producto", "error": str(e)}), 500
 
 @productos_bp.route('/<int:producto_id>', methods=['DELETE'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Eliminar un producto y sus relaciones',
@@ -847,6 +863,8 @@ def delete_producto(producto_id):
         return jsonify({"message": "Error al eliminar el producto", "error": str(e)}), 500
 
 @productos_bp.route('/<int:producto_id>/update-scale', methods=['PUT'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Actualizar la escala de un producto',
@@ -977,6 +995,7 @@ def update_scale(producto_id):
         return jsonify({"message": f"Error al actualizar los valores: {str(e)}"}), 500
 
 @productos_bp.route('/catalog', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Productos'],
     'summary': 'Fetch catalog products with search and pagination',
