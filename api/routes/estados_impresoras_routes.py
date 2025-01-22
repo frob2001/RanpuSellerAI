@@ -4,6 +4,9 @@ from ..models.estados_impresoras import EstadosImpresoras
 from ..schemas.estados_impresoras_schema import EstadosImpresorasSchema
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 # Crear el Blueprint para estados_impresoras
 estados_impresoras_bp = Blueprint('estados_impresoras', __name__)
 
@@ -12,6 +15,7 @@ estado_impresora_schema = EstadosImpresorasSchema()
 estados_impresoras_schema = EstadosImpresorasSchema(many=True)
 
 @estados_impresoras_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['EstadosImpresoras'],
     'summary': 'Obtener todos los estados de impresoras',
@@ -37,8 +41,8 @@ def get_todos_estados_impresoras():
     estados = EstadosImpresoras.query.all()
     return jsonify(estados_impresoras_schema.dump(estados)), 200
 
-
 @estados_impresoras_bp.route('/<int:estado_impresora_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['EstadosImpresoras'],
     'summary': 'Obtener un estado de impresora por ID',
@@ -64,8 +68,8 @@ def get_estado_impresora_por_id(estado_impresora_id):
         return jsonify({"message": "Estado de impresora no encontrado"}), 404
     return jsonify(estado_impresora_schema.dump(estado)), 200
 
-
 @estados_impresoras_bp.route('/', methods=['POST'])
+@validate_origin()
 @swag_from({
     'tags': ['EstadosImpresoras'],
     'summary': 'Crear un nuevo estado de impresora',
@@ -101,8 +105,8 @@ def create_estado_impresora():
         db.session.rollback()
         return jsonify({"message": "Error al crear el estado de impresora", "error": str(e)}), 500
 
-
 @estados_impresoras_bp.route('/<int:estado_impresora_id>', methods=['PUT'])
+@validate_origin()
 @swag_from({
     'tags': ['EstadosImpresoras'],
     'summary': 'Actualizar un estado de impresora existente',
@@ -148,8 +152,8 @@ def update_estado_impresora(estado_impresora_id):
         db.session.rollback()
         return jsonify({"message": "Error al actualizar el estado de impresora", "error": str(e)}), 500
 
-
 @estados_impresoras_bp.route('/<int:estado_impresora_id>', methods=['DELETE'])
+@validate_origin()
 @swag_from({
     'tags': ['EstadosImpresoras'],
     'summary': 'Eliminar un estado de impresora existente',
