@@ -5,10 +5,14 @@ from ..models.filamentos import Filamentos
 from ..models.colores import Colores
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 # Crear el Blueprint para los colores disponibles
 colors_bp = Blueprint('colors', __name__)
 
 @colors_bp.route('/available-colors', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Colores'],
     'summary': 'Obtener colores disponibles',

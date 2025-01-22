@@ -13,6 +13,9 @@ from ..google_storage_config import GoogleCloudStorageConfig
 import firebase_admin
 from firebase_admin import storage
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+from api.middlewares.firebase_auth_middleware import firebase_auth_required
 
 # Create Blueprint
 ai_generation_bp = Blueprint('ai_generation', __name__)
@@ -28,6 +31,8 @@ HEADERS = {
 }
 
 @ai_generation_bp.route('/generate-3d-model', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['AI Generation'],
     'summary': 'Generate a 3D model using Meshy.ai',
@@ -216,6 +221,8 @@ def upload_to_firebase(file_content, file_name):
         raise Exception(f"Failed to upload file to Firebase Storage: {str(e)}")
 
 @ai_generation_bp.route('/finalize-3d-model', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['AI Generation'],
     'summary': 'Finalize a completed 3D model generation',
@@ -435,6 +442,8 @@ def finalize_3d_model():
         return jsonify({'error': f"Failed to save product: {str(e)}"}), 500
 
 @ai_generation_bp.route('/get-model-status', methods=['POST'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['AI Generation'],
     'summary': 'Get the status of a Meshy.ai job (text or image)',
@@ -543,6 +552,8 @@ def get_model_status():
         return jsonify({'error': str(ex)}), 400
 
 @ai_generation_bp.route('/ai-model-polling', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['AI Model Polling'],
     'summary': 'Check if a product has been processed',
@@ -640,6 +651,8 @@ def ai_model_polling():
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 @ai_generation_bp.route('/ai-rescaling-polling', methods=['GET'])
+@validate_origin()
+@firebase_auth_required
 @swag_from({
     'tags': ['AI Rescaling Polling'],
     'summary': 'Check if a product is being rescaled',
@@ -731,6 +744,7 @@ def ai_rescaling_polling():
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
+# For admin use purposes
 @ai_generation_bp.route('/upload-glb', methods=['POST'])
 @swag_from({
     'tags': ['Firebase Storage'],
