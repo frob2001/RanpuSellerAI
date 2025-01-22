@@ -4,6 +4,9 @@ from ..models.modelos import Modelos
 from ..schemas.modelos_schema import ModelosSchema
 from ..database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+
 # Crear el Blueprint para modelos
 modelos_bp = Blueprint('modelos', __name__)
 
@@ -12,6 +15,7 @@ modelo_schema = ModelosSchema()
 modelos_schema = ModelosSchema(many=True)
 
 @modelos_bp.route('/', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Modelos'],
     'summary': 'Obtener todos los modelos',
@@ -58,8 +62,8 @@ def get_todos_modelos():
     ]
     return jsonify(response), 200
 
-
 @modelos_bp.route('/<int:modelo_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Modelos'],
     'summary': 'Obtener un modelo por ID',
@@ -92,8 +96,8 @@ def get_modelo_por_id(modelo_id):
     }
     return jsonify(response), 200
 
-
 @modelos_bp.route('/producto/<int:producto_id>', methods=['GET'])
+@validate_origin()
 @swag_from({
     'tags': ['Modelos'],
     'summary': 'Obtener modelos por producto',
@@ -152,8 +156,8 @@ def get_modelos_por_producto(producto_id):
     ]
     return jsonify(response), 200
 
-
 @modelos_bp.route('/', methods=['POST'])
+@validate_origin()
 @swag_from({
     'tags': ['Modelos'],
     'summary': 'Crear un nuevo modelo',
@@ -221,6 +225,7 @@ def create_modelo():
         return jsonify({"message": "Error al crear el modelo", "error": str(e)}), 500
 
 @modelos_bp.route('/<int:modelo_id>', methods=['PUT'])
+@validate_origin()
 @swag_from({
     'tags': ['Modelos'],
     'summary': 'Actualizar un modelo existente',
@@ -304,6 +309,7 @@ def update_modelo(modelo_id):
         return jsonify({"message": "Error al actualizar el modelo", "error": str(e)}), 500
 
 @modelos_bp.route('/<int:modelo_id>', methods=['DELETE'])
+@validate_origin()
 @swag_from({
     'tags': ['Modelos'],
     'summary': 'Eliminar un modelo existente',
