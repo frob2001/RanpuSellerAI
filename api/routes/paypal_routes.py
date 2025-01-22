@@ -19,6 +19,10 @@ from api.models.usuarios import Usuarios
 from firebase_admin import db as firebase_db  # Firebase Admin SDK initialized
 from api.database import db
 
+# Middleware protections
+from api.middlewares.origin_middleware import validate_origin
+from api.middlewares.firebase_auth_middleware import firebase_auth_required
+
 logger = logging.getLogger(__name__)
 
 paypal_bp = Blueprint("paypal", __name__)
@@ -87,6 +91,8 @@ def capture_order_official(order_id: str) -> dict:
 # =============================================================================
 
 @paypal_bp.route("/orders", methods=["POST"])
+@validate_origin()
+@firebase_auth_required
 def create_order():
     logger.info("Creating PayPal order with dynamic cart calculation from Firebase...")
     request_body = request.get_json() or {}
@@ -263,13 +269,13 @@ def capture_redirect():
         logger.error(f"Error capturing order {order_id}: {e}")
         return redirect(f"{os.getenv('FRONTEND_URL')}/es/payment/error?reason=error")
 
-
 # =============================================================================
 # CAPTURE ORDER (MANUAL CAPTURE / API TRIGGER)
 # =============================================================================
 
 @paypal_bp.route("/orders/<order_id>/capture", methods=["POST"])
-@paypal_bp.route("/orders/<order_id>/capture", methods=["POST"])
+@validate_origin()
+@firebase_auth_required
 def capture_order(order_id):
     """
     Manual capture endpoint with 'all or nothing' behavior:
