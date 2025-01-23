@@ -275,7 +275,6 @@ def capture_redirect():
 
 @paypal_bp.route("/orders/<order_id>/capture", methods=["POST"])
 @validate_origin()
-@firebase_auth_required
 def capture_order(order_id):
     """
     Manual capture endpoint with 'all or nothing' behavior:
